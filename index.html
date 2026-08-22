@@ -95,7 +95,6 @@
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
 <script>
-    // 본인의 Apps Script 웹 앱 URL을 붙여넣으세요.
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
 
     let isCloudConnected = false;
@@ -103,7 +102,14 @@
 
     window.charactersData = [];
     window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
-    window.oState = { mode: 'bound', craftType: 'normal', cat: 'foraging', inv: { bound: { foraging: {w:0,g:0,b:0,p:0}, logging: {w:0,g:0,b:0,p:0}, mining: {w:0,g:0,b:0,p:0}, hunting: {w:0,g:0,b:0,p:0}, fishing: {w:0,g:0,b:0,p:0}, excavating: {w:0,g:0,b:0,p:0} }, tradable: {w:0,g:0,b:0,p:0,t:0} } };
+    
+    // 오레하 상태 단순화 및 가격 데이터 추가
+    window.oState = { 
+        craftType: 'normal', 
+        inv: {w:0, g:0, b:0, p:0, t:0},
+        prices: {w:0, g:0, b:0, t:0, low:0, high:0}
+    };
+    
     window.lastWeeklyResetId = null;
     window.hasCheckedWeeklyReset = false;
     
@@ -133,7 +139,20 @@
                 const data = result.data;
                 if (data.characters) window.charactersData = JSON.parse(data.characters);
                 if (data.cpm) window.cpmData = JSON.parse(data.cpm);
-                if (data.oreha) window.oState = JSON.parse(data.oreha);
+                if (data.oreha) {
+                    let parsed = JSON.parse(data.oreha);
+                    // 과거 데이터 마이그레이션 처리
+                    if (parsed.inv && parsed.inv.tradable) {
+                        window.oState = { 
+                            craftType: parsed.craftType || 'normal', 
+                            inv: parsed.inv.tradable,
+                            prices: {w:0, g:0, b:0, t:0, low:0, high:0}
+                        };
+                    } else {
+                        window.oState = parsed;
+                        if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0};
+                    }
+                }
                 if (data.lastWeeklyResetId) window.lastWeeklyResetId = data.lastWeeklyResetId;
 
                 if (!window.hasCheckedWeeklyReset && window.charactersData.length > 0) {
@@ -164,7 +183,6 @@
 
     let saveTimeout = null;
     
-    // CORS 문제를 회피하기 위해 Content-Type을 text/plain으로 명시하여 서버로 보냄
     window.saveToCloud = function() {
         if (!isCloudConnected) return;
 
@@ -389,6 +407,7 @@
                     </div>
 
                     <div id="cpm-result-area" class="hidden space-y-4">
+                        <!-- CPM 결과 영역 유지 -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-gray-800/80 rounded-xl p-5 border border-gray-600 shadow-inner text-center">
                                 <p class="text-sm text-gray-400 mb-1">현재 CPM</p>
@@ -450,7 +469,6 @@
                                             <tr><th class="font-medium">차이</th><th class="font-medium">시전 횟수</th><th class="font-medium">CPM</th></tr>
                                         </thead>
                                         <tbody id="res-variance-body" class="text-gray-300">
-                                            <!-- JS 렌더링 -->
                                         </tbody>
                                     </table>
                                 </div>
@@ -491,12 +509,6 @@
                 <p class="text-xs text-gray-400">보유하신 재료를 입력하면 가장 효율적인 교환 비율을 찾아 최대 제작 횟수를 안내합니다.</p>
             </div>
 
-            <div class="flex justify-center mb-6">
-                <div class="bg-gray-900/80 p-1 rounded-xl border border-gray-700 flex gap-1" id="oreha-mode-btns">
-                    <!-- JS 렌더링 -->
-                </div>
-            </div>
-
             <div class="grid lg:grid-cols-12 gap-5">
                 <div class="lg:col-span-5 space-y-4">
                     <div class="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 shadow-inner">
@@ -507,9 +519,16 @@
                     </div>
 
                     <div class="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 shadow-inner">
-                        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-1.5"><span class="text-amber-400 text-[10px]">📦</span> 보유 재료 입력</h3>
-                        <div id="oreha-cat-btns" class="grid grid-cols-3 gap-1.5 mb-4"></div>
+                        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-1.5"><span class="text-amber-400 text-[10px]">📦</span> 거래 가능 재료 입력</h3>
                         <div class="space-y-3" id="oreha-inputs-container">
+                            <!-- JS 렌더링 -->
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 shadow-inner mt-4">
+                        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-1.5"><span class="text-green-400 text-[10px]">💰</span> 거래소 단가 입력</h3>
+                        <p class="text-[9px] text-gray-500 mb-3">* 100개 기준, 완제품은 1개 기준입니다.</p>
+                        <div class="grid grid-cols-2 gap-3" id="oreha-prices-container">
                             <!-- JS 렌더링 -->
                         </div>
                     </div>
@@ -651,7 +670,7 @@
         renderConfigFilters(); 
         renderConfigTable(); 
         renderCpmRecords(); 
-        if(typeof window.renderOrehaResult === 'function') window.renderOrehaResult();
+        if(typeof window.renderOrehaUI === 'function') window.renderOrehaUI();
     };
 
     window.switchTab = function(tabName) {
@@ -1102,6 +1121,7 @@
             tabOreha.className = "text-amber-400 font-bold px-1 py-1 border-b-2 border-amber-500 text-sm transition";
             viewCpm.classList.add('hidden');
             viewOreha.classList.remove('hidden');
+            renderOrehaUI(); 
         }
     };
 
@@ -1422,38 +1442,35 @@
         }
     };
 
-    const OREHA_REQ = { normal: { w: 86, g: 45, b: 33, gold: 384, name: '일반 어비도스 융화석' }, advanced: { w: 112, g: 59, b: 43, gold: 499, name: '상급 어비도스 융화석' } };
-    const LIFE_CATS = [ { id: 'foraging', name: '🌿 채집' }, { id: 'logging', name: '🪓 벌목' }, { id: 'mining', name: '⛏️ 채광' }, { id: 'hunting', name: '🏹 수렵' }, { id: 'fishing', name: '🎣 낚시' }, { id: 'excavating', name: '🏺 고고학' } ];
+    const OREHA_REQ = { normal: { w: 86, g: 45, b: 33, gold: 384, name: '하급 어비도스 융화석' }, advanced: { w: 112, g: 59, b: 43, gold: 499, name: '상급 어비도스 융화석' } };
 
-    window.setOrehaMode = function(mode) { window.oState.mode = mode; window.saveToCloud(); renderOrehaUI(); }
     window.setOrehaType = function(type) { window.oState.craftType = type; window.saveToCloud(); renderOrehaUI(); }
-    window.setOrehaCat = function(cat) { window.oState.cat = cat; window.saveToCloud(); renderOrehaUI(); }
     
     window.handleOrehaInput = function(el, field) {
         let raw = el.value.replace(/[^0-9]/g, '');
         let num = parseInt(raw) || 0;
         el.value = raw ? new Intl.NumberFormat('ko-KR').format(num) : '';
-        if (window.oState.mode === 'bound') window.oState.inv.bound[window.oState.cat][field] = num;
-        else window.oState.inv.tradable[field] = num;
+        window.oState.inv[field] = num;
         window.saveToCloud();
         renderOrehaResult();
     };
 
-    function getOrehaInv() { return window.oState.mode === 'bound' ? window.oState.inv.bound[window.oState.cat] : window.oState.inv.tradable; }
+    window.handlePriceInput = function(el, field) {
+        let raw = el.value.replace(/[^0-9]/g, '');
+        let num = parseInt(raw) || 0;
+        el.value = raw ? new Intl.NumberFormat('ko-KR').format(num) : '';
+        if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0};
+        window.oState.prices[field] = num;
+        window.saveToCloud();
+        renderOrehaResult();
+    };
+
     function formatNum(n) { return new Intl.NumberFormat('ko-KR').format(n); }
 
     function renderOrehaUI() {
-        const orehaModeBtns = document.getElementById('oreha-mode-btns');
-        if (!orehaModeBtns) return;
-        
-        orehaModeBtns.innerHTML = `
-            <button onclick="setOrehaMode('bound')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all ${window.oState.mode === 'bound' ? 'bg-amber-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">귀속재료 (원정대)</button>
-            <button onclick="setOrehaMode('tradable')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all ${window.oState.mode === 'tradable' ? 'bg-amber-500 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">교가재료 (거래가능)</button>
-        `;
-
         document.getElementById('oreha-type-btns').innerHTML = `
             <button onclick="setOrehaType('normal')" class="p-3 rounded-xl border transition-all duration-200 flex flex-col items-center gap-1.5 ${window.oState.craftType === 'normal' ? 'bg-amber-900/30 border-amber-500 text-amber-300' : 'bg-gray-800/80 border-gray-700 text-gray-400 hover:border-gray-500'}">
-                <span class="font-bold text-white text-xs">일반 융화석</span>
+                <span class="font-bold text-white text-xs">하급 융화석</span>
                 <span class="text-[10px]">흰86 / 초45 / 파33</span>
             </button>
             <button onclick="setOrehaType('advanced')" class="p-3 rounded-xl border transition-all duration-200 flex flex-col items-center gap-1.5 ${window.oState.craftType === 'advanced' ? 'bg-amber-900/30 border-amber-500 text-amber-300' : 'bg-gray-800/80 border-gray-700 text-gray-400 hover:border-gray-500'}">
@@ -1462,25 +1479,12 @@
             </button>
         `;
 
-        const catContainer = document.getElementById('oreha-cat-btns');
-        if (window.oState.mode === 'bound') {
-            catContainer.innerHTML = LIFE_CATS.map(c => `
-                <button onclick="setOrehaCat('${c.id}')" class="py-1.5 px-1 text-[10px] font-bold rounded border transition-all ${window.oState.cat === c.id ? 'bg-indigo-900/40 border-indigo-500 text-indigo-300' : 'bg-gray-800/80 border-gray-700 text-gray-400 hover:bg-gray-700'}">${c.name}</button>
-            `).join('');
-            catContainer.classList.remove('hidden');
-        } else {
-            catContainer.classList.add('hidden');
-        }
-
-        const inv = getOrehaInv();
-        let inputsHTML = '';
-        if (window.oState.mode === 'tradable') {
-            inputsHTML += `<div class="flex items-center justify-between gap-3 pb-3 border-b border-gray-700/80">
+        const inv = window.oState.inv;
+        let inputsHTML = `
+            <div class="flex items-center justify-between gap-3 pb-3 border-b border-gray-700/80">
                 <label class="text-amber-400 text-xs font-bold w-20">🪵 튼튼한 목재</label>
                 <input type="text" value="${inv.t === 0 || inv.t === undefined ? '' : formatNum(inv.t)}" oninput="handleOrehaInput(this, 't')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-2 px-3 text-right text-amber-100 text-sm focus:border-amber-500 outline-none transition">
-            </div>`;
-        }
-        inputsHTML += `
+            </div>
             <div class="flex items-center justify-between gap-3">
                 <label class="text-gray-300 text-xs font-bold w-20">⚪ 흰색 재료</label>
                 <input type="text" value="${inv.w === 0 ? '' : formatNum(inv.w)}" oninput="handleOrehaInput(this, 'w')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-2 px-3 text-right text-white text-sm focus:border-indigo-500 outline-none transition">
@@ -1499,18 +1503,45 @@
             </div>
         `;
         document.getElementById('oreha-inputs-container').innerHTML = inputsHTML;
+
+        const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
+        let pricesHTML = `
+            <div>
+                <label class="text-gray-400 text-[10px] font-bold block mb-1">🪵 튼튼한목재 (100개)</label>
+                <input type="text" value="${p.t === 0 || p.t === undefined ? '' : formatNum(p.t)}" oninput="handlePriceInput(this, 't')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-1.5 px-2 text-right text-white text-sm focus:border-amber-500 outline-none transition">
+            </div>
+            <div>
+                <label class="text-gray-400 text-[10px] font-bold block mb-1">⚪ 흰색 재료 (100개)</label>
+                <input type="text" value="${p.w === 0 || p.w === undefined ? '' : formatNum(p.w)}" oninput="handlePriceInput(this, 'w')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-1.5 px-2 text-right text-white text-sm focus:border-indigo-500 outline-none transition">
+            </div>
+            <div>
+                <label class="text-gray-400 text-[10px] font-bold block mb-1">🟢 초록 재료 (100개)</label>
+                <input type="text" value="${p.g === 0 || p.g === undefined ? '' : formatNum(p.g)}" oninput="handlePriceInput(this, 'g')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-1.5 px-2 text-right text-white text-sm focus:border-green-500 outline-none transition">
+            </div>
+            <div>
+                <label class="text-gray-400 text-[10px] font-bold block mb-1">🔵 파란 재료 (100개)</label>
+                <input type="text" value="${p.b === 0 || p.b === undefined ? '' : formatNum(p.b)}" oninput="handlePriceInput(this, 'b')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-1.5 px-2 text-right text-white text-sm focus:border-blue-500 outline-none transition">
+            </div>
+            <div>
+                <label class="text-gray-400 text-[10px] font-bold block mb-1">📦 하급 어비도스 (1개)</label>
+                <input type="text" value="${p.low === 0 || p.low === undefined ? '' : formatNum(p.low)}" oninput="handlePriceInput(this, 'low')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-1.5 px-2 text-right text-purple-200 text-sm focus:border-purple-500 outline-none transition">
+            </div>
+            <div>
+                <label class="text-gray-400 text-[10px] font-bold block mb-1">📦 상급 어비도스 (1개)</label>
+                <input type="text" value="${p.high === 0 || p.high === undefined ? '' : formatNum(p.high)}" oninput="handlePriceInput(this, 'high')" placeholder="0" class="w-full bg-gray-800/80 border border-gray-600 rounded py-1.5 px-2 text-right text-purple-200 text-sm focus:border-purple-500 outline-none transition">
+            </div>
+        `;
+        document.getElementById('oreha-prices-container').innerHTML = pricesHTML;
+
         renderOrehaResult();
     }
 
     function calculateOreha() {
-        const inv = getOrehaInv();
+        const inv = window.oState.inv;
         const req = OREHA_REQ[window.oState.craftType];
-        let et = 0, effectiveW = inv.w;
         
-        if (window.oState.mode === 'tradable') {
-            et = Math.floor((inv.t || 0) / 5);
-            effectiveW += et * 50;
-        }
+        let et = Math.floor((inv.t || 0) / 5);
+        let effectiveW = inv.w + et * 50;
 
         const isPossible = (N) => {
             if (effectiveW < N * req.w) return false;
@@ -1565,8 +1596,7 @@
     window.applyOrehaRemaining = function() {
         const res = calculateOreha();
         if (!res) return;
-        if (window.oState.mode === 'bound') window.oState.inv.bound[window.oState.cat] = { w: res.finalW, g: res.finalG, b: res.finalB, p: res.finalP };
-        else window.oState.inv.tradable = { t: res.finalT, w: res.finalW, g: res.finalG, b: res.finalB, p: res.finalP };
+        window.oState.inv = { t: res.finalT, w: res.finalW, g: res.finalG, b: res.finalB, p: res.finalP };
         window.saveToCloud();
         renderOrehaUI();
         showToast('남은 수량이 덮어쓰기 되었습니다.');
@@ -1576,7 +1606,29 @@
         const resContainer = document.getElementById('oreha-result-container');
         if (!resContainer) return;
         const res = calculateOreha();
-        
+        const inv = window.oState.inv;
+        const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
+
+        // 1. 단순 판매 가치 산출 (전체 재료, 수수료 5% 공제)
+        const rawRevenue = (inv.t / 100) * (p.t || 0) + (inv.w / 100) * (p.w || 0) + (inv.g / 100) * (p.g || 0) + (inv.b / 100) * (p.b || 0);
+        const sellRawProfit = rawRevenue * 0.95;
+
+        // 2. 최대 횟수 제작 시 판매 가치 산출 (제작 후 남은 재료 판매 + 융화석 판매 - 제작 골드)
+        let craftProfit = sellRawProfit;
+        let expectedOrehas = 0;
+
+        if (res && res.crafts > 0) {
+            const targetPrice = window.oState.craftType === 'normal' ? (p.low || 0) : (p.high || 0);
+            expectedOrehas = res.crafts * 10.535; // 대성공 5.35% 반영 (1회당 10.535개)
+            const orehaRevenue = expectedOrehas * targetPrice;
+            
+            const leftoverRevenue = (res.finalT / 100) * (p.t || 0) + (res.finalW / 100) * (p.w || 0) + (res.finalG / 100) * (p.g || 0) + (res.finalB / 100) * (p.b || 0);
+            
+            craftProfit = (orehaRevenue * 0.95) - res.gold + (leftoverRevenue * 0.95);
+        }
+
+        const diff = craftProfit - sellRawProfit;
+
         if (!res) {
             resContainer.innerHTML = `
                 <div class="h-full min-h-[350px] bg-gray-900/60 rounded-xl border border-gray-700/50 flex flex-col items-center justify-center text-gray-500 p-6 text-center shadow-inner">
@@ -1588,7 +1640,7 @@
             return;
         }
 
-        let catName = window.oState.mode === 'bound' ? LIFE_CATS.find(c => c.id === window.oState.cat).name.split(' ')[1] : '교가';
+        let catName = '거래가능';
         let planHtml = '';
         
         if (res.et === 0 && res.ew === 0 && res.eg === 0 && res.ep === 0) {
@@ -1601,8 +1653,7 @@
         }
 
         const req = OREHA_REQ[window.oState.craftType];
-        let tableRows = '';
-        if (window.oState.mode === 'tradable') tableRows += `<tr class="border-b border-gray-800"><td class="py-2.5 text-amber-400 font-medium">🪵 튼튼한 목재</td><td class="py-2.5 text-right text-red-400">-${formatNum(res.usedT)}</td><td class="py-2.5 text-right text-white font-bold">${formatNum(res.finalT)}</td></tr>`;
+        let tableRows = `<tr class="border-b border-gray-800"><td class="py-2.5 text-amber-400 font-medium">🪵 튼튼한 목재</td><td class="py-2.5 text-right text-red-400">-${formatNum(res.usedT)}</td><td class="py-2.5 text-right text-white font-bold">${formatNum(res.finalT)}</td></tr>`;
         
         tableRows += `
             <tr class="border-b border-gray-800"><td class="py-2.5 text-gray-300 font-medium">⚪ 흰색 재료</td><td class="py-2.5 text-right text-red-400">-${formatNum(res.usedW)}</td><td class="py-2.5 text-right ${res.finalW >= req.w ? 'text-green-400 font-bold':'text-red-400'}">${formatNum(res.finalW)} ${res.finalW < req.w ? `<span class="text-[9px] font-normal ml-1">(-${formatNum(req.w - res.finalW)})</span>`:''}</td></tr>
@@ -1627,6 +1678,32 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 flex flex-col gap-2">
+                    <h3 class="text-xs font-bold text-white mb-1 flex items-center justify-between">
+                        <span>⚖️ 수익 비교 결과</span>
+                        ${diff > 0 && expectedOrehas > 0 ? `<span class="bg-green-900/50 text-green-400 border border-green-700 px-2 py-0.5 rounded text-[10px]">제작이 이득</span>` : (diff < 0 && expectedOrehas > 0 ? `<span class="bg-red-900/50 text-red-400 border border-red-700 px-2 py-0.5 rounded text-[10px]">단순 판매가 이득</span>` : '')}
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-gray-800/80 p-3 rounded-lg border ${diff <= 0 && rawRevenue > 0 && expectedOrehas > 0 ? 'border-red-500/50' : 'border-gray-700/50'}">
+                            <p class="text-[10px] text-gray-400 mb-1">모든 재료 단순 판매 시</p>
+                            <p class="text-sm font-bold text-white">${formatNum(Math.floor(sellRawProfit))} <span class="text-[10px] font-normal text-gray-500">골드</span></p>
+                        </div>
+                        <div class="bg-gray-800/80 p-3 rounded-lg border ${diff > 0 && expectedOrehas > 0 ? 'border-green-500/50' : 'border-gray-700/50'}">
+                            <p class="text-[10px] text-gray-400 mb-1">최대 제작 후 판매 시</p>
+                            <p class="text-sm font-bold text-white">${formatNum(Math.floor(craftProfit))} <span class="text-[10px] font-normal text-gray-500">골드</span></p>
+                        </div>
+                    </div>
+                    
+                    ${diff !== 0 && sellRawProfit > 0 && expectedOrehas > 0 ? `
+                        <div class="text-center mt-1 p-2 rounded bg-gray-800/40 text-xs">
+                            ${diff > 0 ? `제작해서 파는 것이 <span class="text-green-400 font-bold">${formatNum(Math.floor(diff))} 골드</span> 더 이득입니다.` : `재료를 그냥 파는 것이 <span class="text-red-400 font-bold">${formatNum(Math.floor(Math.abs(diff)))} 골드</span> 더 이득입니다.`}
+                        </div>
+                    ` : ''}
+                    <p class="text-[9px] text-gray-500 mt-1">* 거래소 수수료 5% 및 대성공 5.35% (총 ${formatNum(Math.floor(expectedOrehas))}개 획득 예상) 산출 반영 기준</p>
+                </div>
+
                 <div class="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50">
                     <h3 class="text-xs font-bold text-white mb-3 flex items-center gap-1.5"><span>🔄</span> 추천 교환 플랜</h3>
                     ${planHtml}
