@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로스트아크 주간 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #121212; color: #ffffff; }
+        .glass-panel { background: #1e1e1e; border: 1px solid #333; border-radius: 12px; }
+        .dungeon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; }
+        .tooltip { transition: opacity 0.2s; pointer-events: none; z-index: 50; }
+        .completed-row { text-decoration: line-through; opacity: 0.4; filter: grayscale(100%); }
+        /* 넘버 인풋 화살표 숨기기 */
+        input[type="number"]::-webkit-outer-spin-button, 
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="p-6">
+
+    <script>
+        // 발급받은 GAS 웹앱 URL (단일 DB 연결)
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwYaoiEkl7XJ3zACl3GNnNLFOTJZ8mHBISUleEu38dwzOWcPErlxjlNIPSAj8NRj4hM/exec";
+    </script>
+
+    <!-- 최상단 상태바 -->
+    <div class="flex justify-between items-center mb-6 max-w-6xl mx-auto">
+        <h1 class="text-2xl font-bold">💎 로아 주간 대시보드</h1>
+        <div id="cloud-status" class="px-3 py-1 rounded text-sm font-bold bg-yellow-600 text-white">
+            클라우드 불러오는 중...
+        </div>
+    </div>
+
+    <!-- 메인 레이아웃 -->
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- 왼쪽: 요약 및 편의 기능 -->
+        <div class="space-y-6">
+            
+            <!-- 주간 숙제 요약 -->
+            <div class="glass-panel p-5">
+                <h2 class="text-lg font-bold mb-4 flex items-center gap-2">📋 주간 숙제 요약</h2>
+                <div id="summary-box" class="space-y-3">
+                    <!-- JS로 렌더링 -->
+                </div>
+            </div>
+
+            <!-- 오레하 융화 재료 계산기 -->
+            <div class="glass-panel p-5">
+                <h2 class="text-lg font-bold mb-4">⛏️ 오레하 수익 계산기</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">제작 비용 (G)</span>
+                        <input type="number" id="oreha-cost" oninput="updateOreha()" class="w-1/2 bg-gray-800 border border-gray-600 rounded p-1.5 text-right text-white outline-none">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">경매장 시세 (G)</span>
+                        <input type="number" id="oreha-price" oninput="updateOreha()" class="w-1/2 bg-gray-800 border border-gray-600 rounded p-1.5 text-right text-white outline-none">
+                    </div>
+                    <div class="border-t border-gray-700 pt-3 flex justify-between items-center">
+                        <span class="text-sm font-bold">예상 차익</span>
+                        <span id="oreha-profit" class="font-bold text-blue-400">0 G</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CPM 계산기 -->
+            <div class="glass-panel p-5">
+                <h2 class="text-lg font-bold mb-4">⏱️ CPM 분석기</h2>
+                <div class="space-y-3">
+                    <input type="number" id="cpm-input" oninput="updateCPM()" placeholder="목표 시전 횟수 입력" class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white outline-none text-center">
+                    <div id="cpm-result" class="hidden flex-col gap-1 mt-2 bg-gray-800/50 p-3 rounded border border-gray-700">
+                        <div class="text-sm text-gray-300 font-bold flex justify-between">
+                            <span>목표 달성 기준</span>
+                            <span id="cpm-target-txt" class="text-blue-400"></span>
+                        </div>
+                        <div class="text-xs text-gray-400 flex justify-between mt-1">
+                            <span>오차 범위 (±2)</span>
+                            <span id="cpm-range-txt"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 오른쪽: 캐릭터 카드 뷰 -->
+        <div class="lg:col-span-2 glass-panel p-5 relative">
+            <div class="dungeon-grid mb-4 text-sm text-gray-400 font-bold border-b border-gray-700 pb-2 ml-24">
+                <div>4막</div>
+                <div>종막</div>
+                <div>성당</div>
+                <div>세르카</div>
+                <div>벨가</div>
+            </div>
+            
+            <div id="character-list" class="space-y-3">
+                <!-- JS로 렌더링 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 커스텀 호버 툴팁 -->
+    <div id="custom-tooltip" class="tooltip fixed opacity-0 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 text-sm whitespace-nowrap"></div>
+
+    <script>
+        const DUNGEONS = [
+            { id: "act4", name: "4막", reqLevel: 1720, colors: { "싱글":"bg-white text-black", "노말":"bg-blue-600", "하드":"bg-purple-600" } },
+            { id: "end", name: "종막", reqLevel: 1710, colors: { "싱글":"bg-white text-black", "노말":"bg-blue-600", "하드":"bg-purple-600" } },
+            { id: "cathedral", name: "성당", reqLevel: 1710, colors: { "1단":"bg-green-600", "2단":"bg-blue-600", "3단":"bg-purple-600" } },
+            { id: "serca", name: "세르카", reqLevel: 1710, colors: { "싱글":"bg-white text-black", "노말":"bg-blue-600", "하드":"bg-purple-600", "나메":"bg-red-600" } },
+            { id: "velga", name: "벨가", reqLevel: 1750, colors: { "노말":"bg-blue-600", "하드":"bg-purple-600", "나메":"bg-red-600" } }
+        ];
+
+        // 앱 전체 데이터 (DB에 이 객체가 통째로 저장됨)
+        let appData = {
+            characters: [
+                { name: "슬가-슬레", level: 1720, dungeons: {} },
+                { name: "정명-차술", level: 1710, dungeons: {} },
+                ...Array.from({ length: 17 }).map((_, i) => ({ name: `캐릭터${i+3}`, level: 1710, dungeons: {} }))
+            ],
+            cpmTarget: "",
+            orehaCost: "",
+            orehaPrice: ""
+        };
+
+        // 타이머 변수 (자동 저장 과부하 방지)
+        let saveTimeout = null;
+
+        const tooltip = document.getElementById('custom-tooltip');
+        window.showTooltip = (e, remaining, assigned) => {
+            const remArr = remaining.split(',');
+            const assArr = assigned.split(',');
+            
+            tooltip.innerHTML = `
+                <div class="text-yellow-400 font-bold mb-1 text-[13px]">남은 캐릭터: ${remArr[0] ? remArr.join(', ') : '없음'}</div>
+                <div class="text-gray-300 text-[12px]">배정: ${assArr[0] ? assArr.join(', ') : '없음'}</div>
+            `;
+            tooltip.style.left = e.pageX + 15 + 'px';
+            tooltip.style.top = e.pageY + 15 + 'px';
+            tooltip.style.opacity = '1';
+        };
+        window.hideTooltip = () => { tooltip.style.opacity = '0'; };
+
+        // ----------------------------------------------------
+        // 데이터 렌더링 파트
+        // ----------------------------------------------------
+        function renderAll() {
+            renderCharacters();
+            renderSummary();
+            renderCalculators();
+        }
+
+        // 입력 폼 데이터 화면에 적용 (화면 튕김 방지를 위해 별도 분리)
+        function renderCalculators() {
+            const costInput = document.getElementById('oreha-cost');
+            const priceInput = document.getElementById('oreha-price');
+            const cpmInput = document.getElementById('cpm-input');
+
+            if(appData.orehaCost) costInput.value = appData.orehaCost;
+            if(appData.orehaPrice) priceInput.value = appData.orehaPrice;
+            if(appData.cpmTarget) cpmInput.value = appData.cpmTarget;
+
+            updateOrehaUI();
+            updateCPMUI();
+        }
+
+        function renderCharacters() {
+            const list = document.getElementById('character-list');
+            list.innerHTML = '';
+
+            appData.characters.forEach((char, charIdx) => {
+                const row = document.createElement('div');
+                row.className = "flex items-center gap-4 bg-gray-800/40 p-3 rounded-lg border border-gray-700";
+
+                let html = `
+                    <div class="w-20 shrink-0">
+                        <div class="font-bold text-sm">${char.name}</div>
+                        <div class="text-xs text-gray-400">Lv.${char.level}</div>
+                    </div>
+                    <div class="dungeon-grid flex-1">
+                `;
+
+                DUNGEONS.forEach(dungeon => {
+                    if (char.level >= dungeon.reqLevel) {
+                        const isChecked = char.dungeons[dungeon.id]?.done || false;
+                        const difficulty = char.dungeons[dungeon.id]?.diff || Object.keys(dungeon.colors)[0];
+                        const colorClass = dungeon.colors[difficulty];
+
+                        html += `
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded cursor-pointer ${colorClass}" 
+                                      onclick="changeDifficulty(${charIdx}, '${dungeon.id}')">${difficulty}</span>
+                                <input type="checkbox" class="w-5 h-5 cursor-pointer" 
+                                       ${isChecked ? 'checked' : ''} 
+                                       onchange="toggleDungeon(${charIdx}, '${dungeon.id}', this.checked)">
+                            </div>
+                        `;
+                    } else {
+                        html += `<div></div>`;
+                    }
+                });
+                html += `</div>`;
+                row.innerHTML = html;
+                list.appendChild(row);
+            });
+        }
+
+        // 요약 박스 로직
+        function renderSummary() {
+            const box = document.getElementById('summary-box');
+            box.innerHTML = '';
+
+            DUNGEONS.forEach(dungeon => {
+                const availableChars = appData.characters.filter(c => c.level >= dungeon.reqLevel);
+                if (availableChars.length === 0) return;
+
+                const diffGroups = {};
+                availableChars.forEach(c => {
+                    const diff = c.dungeons[dungeon.id]?.diff || Object.keys(dungeon.colors)[0];
+                    const isDone = c.dungeons[dungeon.id]?.done || false;
+                    
+                    if (!diffGroups[diff]) diffGroups[diff] = { total: [], remaining: [] };
+                    
+                    diffGroups[diff].total.push(c.name);
+                    if (!isDone) diffGroups[diff].remaining.push(c.name);
+                });
+
+                let rowHtml = `<div class="flex items-center py-2 border-b border-gray-700/50 last:border-0 gap-4">
+                                  <div class="w-12 font-bold text-gray-300 text-sm">${dungeon.name}</div>
+                                  <div class="flex-1 grid grid-cols-3 gap-2">`;
+
+                Object.keys(diffGroups).forEach(diff => {
+                    const totalCount = diffGroups[diff].total.length;
+                    const remCount = diffGroups[diff].remaining.length;
+                    
+                    if (totalCount > 0) {
+                        const isCompleted = (remCount === 0);
+                        const colorClass = isCompleted ? 'bg-gray-700 text-gray-400' : dungeon.colors[diff];
+                        const rowClass = isCompleted ? 'completed-row' : '';
+                        const tooltipParams = `showTooltip(event, '${diffGroups[diff].remaining.join(',')}', '${diffGroups[diff].total.join(',')}')`;
+
+                        rowHtml += `
+                            <div class="flex justify-between items-center bg-gray-800/80 px-2 py-1 rounded border border-gray-700 cursor-help ${rowClass}" 
+                                 onmouseenter="${tooltipParams}" onmouseleave="hideTooltip()" onmousemove="tooltip.style.left = event.pageX + 15 + 'px'; tooltip.style.top = event.pageY + 15 + 'px';">
+                                <span class="text-[10px] px-1 rounded ${colorClass}">${diff}</span>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="text-[12px] font-black text-white">${remCount}</span>
+                                    <span class="text-[9px] text-gray-500">/${totalCount}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                rowHtml += `</div></div>`;
+                box.innerHTML += rowHtml;
+            });
+        }
+
+        // ----------------------------------------------------
+        // 사용자 인터랙션 (조작부)
+        // ----------------------------------------------------
+        window.changeDifficulty = (charIdx, dungeonId) => {
+            const dungeonInfo = DUNGEONS.find(d => d.id === dungeonId);
+            const diffKeys = Object.keys(dungeonInfo.colors);
+            
+            let currentDiff = appData.characters[charIdx].dungeons[dungeonId]?.diff || diffKeys[0];
+            let nextIndex = (diffKeys.indexOf(currentDiff) + 1) % diffKeys.length;
+            
+            if(!appData.characters[charIdx].dungeons[dungeonId]) appData.characters[charIdx].dungeons[dungeonId] = {};
+            appData.characters[charIdx].dungeons[dungeonId].diff = diffKeys[nextIndex];
+            
+            renderCharacters();
+            renderSummary();
+            triggerSave();
+        }
+
+        window.toggleDungeon = (charIdx, dungeonId, isDone) => {
+            if(!appData.characters[charIdx].dungeons[dungeonId]) appData.characters[charIdx].dungeons[dungeonId] = {};
+            appData.characters[charIdx].dungeons[dungeonId].done = isDone;
+            
+            renderSummary();
+            triggerSave();
+        }
+
+        window.updateOreha = () => {
+            appData.orehaCost = document.getElementById('oreha-cost').value;
+            appData.orehaPrice = document.getElementById('oreha-price').value;
+            updateOrehaUI();
+            triggerSave();
+        }
+
+        function updateOrehaUI() {
+            const cost = Number(appData.orehaCost) || 0;
+            const price = Number(appData.orehaPrice) || 0;
+            const profit = price - cost;
+            const profitEl = document.getElementById('oreha-profit');
+            
+            if (cost === 0 && price === 0) {
+                profitEl.innerText = "0 G";
+                profitEl.className = "font-bold text-gray-400";
+            } else if (profit > 0) {
+                profitEl.innerText = `+${profit.toLocaleString()} G`;
+                profitEl.className = "font-bold text-green-400";
+            } else {
+                profitEl.innerText = `${profit.toLocaleString()} G`;
+                profitEl.className = "font-bold text-red-400";
+            }
+        }
+
+        window.updateCPM = () => {
+            appData.cpmTarget = document.getElementById('cpm-input').value;
+            updateCPMUI();
+            triggerSave();
+        }
+
+        function updateCPMUI() {
+            const val = parseInt(appData.cpmTarget);
+            const resBox = document.getElementById('cpm-result');
+            
+            if(!val || isNaN(val)) {
+                resBox.classList.add('hidden');
+                resBox.classList.remove('flex');
+            } else {
+                resBox.classList.remove('hidden');
+                resBox.classList.add('flex');
+                document.getElementById('cpm-target-txt').innerText = `${val} 회`;
+                document.getElementById('cpm-range-txt').innerText = `${val - 2} ~ ${val + 2} 회`;
+            }
+        }
+
+        // ----------------------------------------------------
+        // GAS 클라우드 연동 로직 (방 번호 삭제, 단일 DB)
+        // ----------------------------------------------------
+        async function loadFromCloud() {
+            try {
+                // 단일 데이터베이스(MAIN_DB)로 고정 호출
+                const res = await fetch(`${GAS_WEB_APP_URL}?roomId=MAIN_DB`);
+                const result = await res.json();
+                
+                if (result.status === "success" && result.data) {
+                    // 서버에 저장된 데이터 병합 (없으면 초기값 유지)
+                    appData = { ...appData, ...result.data };
+                }
+                
+                document.getElementById('cloud-status').innerText = `✅ 클라우드 연동됨 (단일 DB)`;
+                document.getElementById('cloud-status').className = "px-3 py-1 rounded text-sm font-bold bg-blue-600 text-white";
+            } catch(e) {
+                console.error("클라우드 로드 실패:", e);
+                document.getElementById('cloud-status').innerText = `⚠️ 오프라인 모드`;
+                document.getElementById('cloud-status').className = "px-3 py-1 rounded text-sm font-bold bg-red-600 text-white";
+            }
+            renderAll();
+        }
+
+        // 글씨를 쓰는 도중마다 저장 API가 미친듯이 호출되는 걸 막기 위한 디바운스(0.5초 지연) 저장
+        function triggerSave() {
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveToCloud();
+            }, 500);
+        }
+
+        async function saveToCloud() {
+            const payload = { roomId: "MAIN_DB", data: appData };
+            try {
+                await fetch(GAS_WEB_APP_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+            } catch(e) { 
+                console.error("저장 실패", e); 
+            }
+        }
+
+        // 최초 실행
+        loadFromCloud();
+
+    </script>
+</body>
+</html>
