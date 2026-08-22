@@ -92,7 +92,7 @@
 </head>
 <body class="p-3 md:p-5 min-h-screen relative">
 
-<!-- 마우스 호버 커스텀 툴팁 컨테이너 (복구됨) -->
+<!-- 마우스 호버 커스텀 툴팁 컨테이너 -->
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-gray-900 border border-gray-600 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 
 <!-- 토스트 메시지 컨테이너 -->
@@ -100,7 +100,6 @@
 
 <!-- 구글 앱스 스크립트(GAS) 기반 클라우드 연동 (단일 DB) -->
 <script>
-    // 💡여기에 방금 새로 발급받으신 GAS 웹앱 URL을 입력해주세요!
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
 
     let isCloudConnected = false;
@@ -112,7 +111,9 @@
     window.oState = { mode: 'bound', craftType: 'normal', cat: 'foraging', inv: { bound: { foraging: {w:0,g:0,b:0,p:0}, logging: {w:0,g:0,b:0,p:0}, mining: {w:0,g:0,b:0,p:0}, hunting: {w:0,g:0,b:0,p:0}, fishing: {w:0,g:0,b:0,p:0}, excavating: {w:0,g:0,b:0,p:0} }, tradable: {w:0,g:0,b:0,p:0,t:0} } };
     window.lastWeeklyResetId = null;
     window.hasCheckedWeeklyReset = false;
-    let configSelectedPlayers = new Set();
+    
+    // 에러 수정: window 전역 변수로 선언
+    window.configSelectedPlayers = new Set();
     let editingDbId = null;
     let editingCpmId = null;
 
@@ -125,12 +126,6 @@
                 ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]';
                 st.innerHTML = `서버 주소 미입력 (오프라인 모드)`;
                 st.className = 'text-[11px] text-red-400 font-bold tracking-wide flex items-center';
-            }
-            // 로컬 기본값으로라도 화면 띄우기
-            if (typeof window.rawDefaultData !== 'undefined') {
-                window.charactersData = window.rawDefaultData.map(c => ({
-                    dbId: c.id, player: c.player, name: c.name, level: c.level, contents: window.calculateContents(c.level), completed: [], timestamp: Date.now()
-                }));
             }
             if(typeof window.renderAll === 'function') window.renderAll();
             return;
@@ -158,7 +153,7 @@
             
             if (ind && st) {
                 ind.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]';
-                st.innerHTML = `클라우드 연동 완료 (단일 DB) <span class="text-gray-300 ml-1.5 font-normal text-[10px] border border-blue-500/50 px-1.5 py-0.5 rounded bg-blue-900/30">깃허브 접속자 전원 실시간 동기화</span>`;
+                st.innerHTML = `클라우드 연동 완료 <span class="text-gray-300 ml-1.5 font-normal text-[10px] border border-blue-500/50 px-1.5 py-0.5 rounded bg-blue-900/30">실시간 동기화 중</span>`;
                 st.className = 'text-[11px] text-blue-400 font-bold tracking-wide flex items-center';
             }
 
@@ -170,12 +165,6 @@
                 ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]';
                 st.innerHTML = `서버 연결 실패 (접근 권한을 확인하세요)`;
                 st.className = 'text-[11px] text-red-400 font-bold tracking-wide flex items-center';
-            }
-            // 오류나도 로컬 데이터로 화면은 띄움
-            if (typeof window.rawDefaultData !== 'undefined' && window.charactersData.length === 0) {
-                window.charactersData = window.rawDefaultData.map(c => ({
-                    dbId: c.id, player: c.player, name: c.name, level: c.level, contents: window.calculateContents(c.level), completed: [], timestamp: Date.now()
-                }));
             }
             if(typeof window.renderAll === 'function') window.renderAll();
         }
@@ -208,24 +197,20 @@
         }, 500);
     };
 
-    // UI 및 기본 데이터 스크립트가 로드된 후 실행되도록 지연
     setTimeout(initCloudDB, 300);
 </script>
 
 <div class="max-w-7xl mx-auto space-y-5 pb-10">
-    <!-- 상태 표시기 -->
     <div class="flex justify-end items-center gap-2 mb-1">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></span>
         <span id="cloud-status" class="text-[11px] text-orange-400 font-bold tracking-wide">방 생성 및 클라우드 연결 중...</span>
     </div>
 
-    <!-- 헤더 -->
     <div class="text-center space-y-1.5 relative">
         <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">💻 로스트아크 클라우드 대시보드</h1>
         <p class="text-xs md:text-sm text-gray-400">싱글 난이도 최우선 정렬 / 1줄 콤팩트 레이아웃 / 수요일 자동 리셋</p>
     </div>
 
-    <!-- 탭 네비게이션 -->
     <div class="flex flex-wrap justify-center gap-2 mb-4">
         <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg border border-gray-600 font-semibold text-sm shadow-sm">📊 메인 대시보드</button>
         <button onclick="switchTab('filter')" id="tab-filter" class="tab-btn px-4 py-2 rounded-lg border border-gray-600 font-semibold text-sm shadow-sm">🔍 던전 파티 검색</button>
@@ -233,7 +218,6 @@
         <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-gray-600 font-semibold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
-    <!-- 탭 1: 대시보드 -->
     <div id="view-dashboard" class="space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-gray-900/50 p-3 rounded-xl border border-gray-700/50 shadow-inner">
             <div>
@@ -249,7 +233,6 @@
         </div>
     </div>
 
-    <!-- 탭 2: 던전별 필터 -->
     <div id="view-filter" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-lg">
             <h2 class="text-base font-bold mb-3 text-white">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
@@ -262,7 +245,6 @@
         </div>
     </div>
 
-    <!-- 탭 3: 캐릭터 설정 -->
     <div id="view-config" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-lg border-l-4 border-l-green-500 transition-colors duration-300" id="form-panel">
             <h2 id="form-title" class="text-base font-bold mb-3 text-white flex items-center gap-2">
@@ -317,24 +299,20 @@
         </div>
     </div>
 
-    <!-- 탭 4: 편의 기능 (툴) -->
     <div id="view-tools" class="hidden space-y-4">
         <div class="flex gap-4 border-b border-gray-700/80 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-400 font-bold px-1 py-1 border-b-2 border-blue-500 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-gray-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-amber-400 transition">💰 오레하 계산기</button>
         </div>
 
-        <!-- CPM 계산기 본문 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-lg border-t-4 border-t-blue-500 max-w-6xl mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
-                <!-- 좌측: 계산기 폼 및 결과 영역 -->
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
                     <div class="mb-5">
                         <h2 class="text-lg md:text-xl font-bold text-white mb-1">로스트아크 CPM 계산기</h2>
                         <p class="text-xs text-gray-400">전투 분석 기록의 총 전투시간과 스킬 시전 횟수를 입력하면 CPM(Casts Per Minute)을 계산합니다.</p>
                     </div>
 
-                    <!-- 입력 폼 -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-[11px] text-gray-400 mb-1">기록명 (선택)</label>
@@ -403,7 +381,6 @@
                         <p class="text-[10px] text-gray-500 mt-1">공식 CPM이 아닌 개인 비교용 보정값입니다. 일반 기록 비교에서는 0초로 두는 것을 권장합니다.</p>
                     </div>
 
-                    <!-- 버튼 영역 -->
                     <div class="flex justify-center gap-2 my-5">
                         <button onclick="runCpmCalculation()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded shadow-md transition flex items-center gap-2">
                             📊 계산하기
@@ -413,7 +390,6 @@
                         </button>
                     </div>
 
-                    <!-- 결과 영역 (기본적으로 숨김) -->
                     <div id="cpm-result-area" class="hidden space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-gray-800/80 rounded-xl p-5 border border-gray-600 shadow-inner text-center">
@@ -494,7 +470,6 @@
                     </div>
                 </div>
 
-                <!-- 우측: 저장된 기록 리스트 영역 -->
                 <div class="lg:col-span-4 lg:border-l border-gray-700/80 lg:pl-5 h-full">
                     <div class="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 shadow-inner h-full min-h-[350px] flex flex-col">
                         <h3 class="text-sm font-bold text-white mb-3 flex items-center justify-between">
@@ -510,7 +485,6 @@
             </div>
         </div>
 
-        <!-- 오레하 계산기 본문 -->
         <div id="tool-view-oreha" class="hidden glass-panel p-4 md:p-6 shadow-lg border-t-4 border-t-amber-500 max-w-5xl mx-auto">
             <div class="mb-6 text-center">
                 <h2 class="text-lg md:text-xl font-bold text-white mb-1 flex items-center justify-center gap-2">
@@ -519,7 +493,6 @@
                 <p class="text-xs text-gray-400">보유하신 재료를 입력하면 가장 효율적인 교환 비율을 찾아 최대 제작 횟수를 안내합니다.</p>
             </div>
 
-            <!-- Mode Selector -->
             <div class="flex justify-center mb-6">
                 <div class="bg-gray-900/80 p-1 rounded-xl border border-gray-700 flex gap-1" id="oreha-mode-btns">
                     <!-- JS 렌더링 -->
@@ -527,7 +500,6 @@
             </div>
 
             <div class="grid lg:grid-cols-12 gap-5">
-                <!-- Inputs 영역 -->
                 <div class="lg:col-span-5 space-y-4">
                     <div class="bg-gray-900/60 rounded-xl p-4 border border-gray-700/50 shadow-inner">
                         <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-1.5"><span class="text-amber-400 text-[10px]">✔️</span> 제작 목표 선택</h3>
@@ -545,7 +517,6 @@
                     </div>
                 </div>
 
-                <!-- Result 영역 -->
                 <div class="lg:col-span-7 h-full" id="oreha-result-container">
                     <!-- JS 렌더링 -->
                 </div>
@@ -556,29 +527,6 @@
 </div>
 
 <script>
-    // 유저 요청 반영: 소수점 모두 버림, 슬가-슬레(1720), 정명-차술(1710)
-    window.rawDefaultData = [
-        { id: 'char_1', player: '건희', name: '바드', level: 1783 },
-        { id: 'char_2', player: '건희', name: '홀나', level: 1750 },
-        { id: 'char_3', player: '건희', name: '가나', level: 1750 },
-        { id: 'char_4', player: '건희', name: '워로드', level: 1750 },
-        { id: 'char_5', player: '건희', name: '도화가', level: 1750 },
-        { id: 'char_6', player: '건희', name: '발키리', level: 1750 },
-        { id: 'char_7', player: '건희', name: '차술', level: 1720 },
-        { id: 'char_7_2', player: '건희', name: '호크/환/브/디', level: 1700 },
-        { id: 'char_8', player: '상욱', name: '브커', level: 1787 },
-        { id: 'char_9', player: '상욱', name: '호크', level: 1774 },
-        { id: 'char_10', player: '상욱', name: '버서커', level: 1714 },
-        { id: 'char_11', player: '상욱', name: '슬레', level: 1701 },
-        { id: 'char_12', player: '슬가', name: '인파', level: 1750 },
-        { id: 'char_13', player: '슬가', name: '슬레', level: 1720 }, // 1720으로 수정됨
-        { id: 'char_14', player: '정명', name: '환수', level: 1750 },
-        { id: 'char_15', player: '정명', name: '기상', level: 1731 },
-        { id: 'char_16', player: '정명', name: '가나', level: 1720 },
-        { id: 'char_17', player: '정명', name: '차술', level: 1710 }, // 1710으로 수정됨
-        { id: 'char_18', player: '정명', name: '소울', level: 1700 }
-    ];
-
     const dungeonCategories = [
         { id: '4막', label: '4막', diffs: ['4막싱글', '4막하드'] },
         { id: '종막', label: '종막', diffs: ['종막싱글', '종막하드'] },
@@ -615,7 +563,6 @@
     function getPlayerColor(playerName) { return playerColors[playerName] || fallbackColors[playerName.length % fallbackColors.length]; }
 
     function getDiffStyle(diff) {
-        // 난이도별 색상 통일 규칙
         if (diff.includes('싱글')) return 'bg-white text-gray-900 border-gray-300 font-bold hover:bg-gray-200';
         if (diff.includes('나메')) return 'text-red-300 bg-red-900/40 border-red-500/50 hover:bg-red-800/60';
         if (diff.includes('3단') || diff.includes('하드') || diff.includes('벨가하드')) return 'text-purple-300 bg-purple-900/40 border-purple-500/50 hover:bg-purple-800/60';
@@ -706,7 +653,6 @@
         renderConfigFilters(); 
         renderConfigTable(); 
         renderCpmRecords(); 
-        // 포커스 유지를 위해 결과만 다시 그림
         if(typeof window.renderOrehaResult === 'function') window.renderOrehaResult();
     };
 
@@ -744,7 +690,6 @@
             let hasAnySummary = false;
             
             const getDiffStyleInfo = (diffName) => {
-                // 난이도별 색상 통일화 규칙
                 if(diffName.includes('싱글')) return { col: 1, color: 'text-gray-900', bg: 'bg-white font-bold' };
                 if(diffName.includes('1단')) return { col: 1, color: 'text-green-300', bg: 'bg-green-900/40' };
                 if(diffName.includes('노말')) return { col: 1, color: 'text-blue-300', bg: 'bg-blue-900/40' };
@@ -782,12 +727,10 @@
                         let boxClass = `col-start-${style.col} flex items-center justify-between gap-1 px-1.5 py-0.5 rounded border border-gray-700/50 w-full max-w-[90px] cursor-help transition-all`;
                         let badgeClass = `${style.color} font-bold text-[10px] ${style.bg} px-1 rounded whitespace-nowrap`;
                         
-                        // 남은 숫자, 합산 숫자 시인성 강화
                         let remainingClass = "text-white font-black text-[12px]";
                         let totalClass = "text-gray-500 font-medium text-[9px]";
                         
                         if (totalRemaining === 0) {
-                            // 모두 클리어 시 전체에 밑줄 및 색상 끄기
                             boxClass += " bg-gray-800/40 opacity-40 grayscale line-through border-transparent";
                             badgeClass = "text-gray-400 font-bold text-[10px] bg-gray-700/80 px-1 rounded whitespace-nowrap line-through border-transparent";
                             remainingClass = "text-gray-500 font-bold text-[12px] line-through";
@@ -826,14 +769,13 @@
             html += `<div class="flex flex-col gap-1.5">`; 
             
             chars.forEach(char => {
-                // 5개의 고정된 열(4막, 종막, 성당, 세르카, 벨가)을 순서대로 생성
                 const contentsHtml = `<div class="grid grid-cols-5 gap-1 md:gap-1.5 w-full sm:w-[280px] md:w-[380px] shrink-0 sm:ml-auto">` + dungeonCategories.map(cat => {
                     const c = cat.diffs.find(diff => char.contents && char.contents.includes(diff));
                     if (c) {
                         const isCompleted = char.completed && char.completed.includes(c);
                         return `<span onclick="toggleCompletion('${char.dbId}', '${c}')" class="dungeon-badge w-full !m-0 h-full text-[9px] md:text-[11px] px-0.5 py-1 md:py-1.5 rounded font-medium tracking-tighter ${getDiffStyle(c)} ${isCompleted ? 'completed' : ''}">${c}</span>`;
                     }
-                    return `<span></span>`; // 못 가는 곳은 빈칸으로 고정
+                    return `<span></span>`;
                 }).join('') + `</div>`;
                 
                 const isSupp = supporters.includes(char.name);
@@ -1124,15 +1066,16 @@
         if (btnElement.innerText === "확인") {
             btnElement.innerText = "초기화 중...";
             btnElement.disabled = true;
-            window.charactersData = window.rawDefaultData.map(c => ({
-                dbId: c.id, player: c.player, name: c.name, level: c.level, contents: window.calculateContents(c.level), completed: [], timestamp: Date.now()
-            }));
+            
+            // 완전 초기화 시 빈 배열로 만듦 (더미 데이터 삭제 반영)
+            window.charactersData = [];
             window.cpmData = { inputs: {}, records: [] };
+            
             window.saveToCloud();
             renderAll();
             btnElement.disabled = false;
             btnElement.innerText = "데이터 완전 초기화";
-            showToast('모든 데이터가 기본값으로 초기화되었습니다.');
+            showToast('모든 데이터가 초기화되었습니다.');
         } else {
             const originalText = btnElement.innerText;
             btnElement.innerText = "확인";
@@ -1186,17 +1129,14 @@
             return;
         }
 
-        // 핵심 계산
         const cpm = (casts * 60) / totalSec;
         const interval = totalSec / casts;
         const castsPer30s = cpm / 2;
         const impact = 60 / totalSec;
 
-        // 화면 갱신: 하이라이트 요약
         document.getElementById('res-current-cpm').innerText = cpm.toFixed(2);
         document.getElementById('res-interval').innerText = interval.toFixed(2);
 
-        // 화면 갱신: 분석 결과 테이블
         let timeStr = `${min}분 ${sec}초`;
         if (exclude > 0) timeStr += ` (총 ${totalOriginalSec}초 - 보정 ${exclude}초 = ${totalSec}초)`;
         else timeStr += ` (${totalSec}초)`;
@@ -1208,7 +1148,6 @@
         document.getElementById('res-interval-text').innerText = `약 ${interval.toFixed(2)}초마다 1회`;
         document.getElementById('res-impact').innerText = `약 ${impact.toFixed(3)} CPM`;
 
-        // 목표 CPM (선택)
         const targetSection = document.getElementById('target-progress-section');
         const badgeSuccess = document.getElementById('target-success-badge');
         const rowTargetVal = document.getElementById('row-target-val');
@@ -1281,7 +1220,6 @@
             rowTargetRate.classList.add('hidden');
         }
 
-        // 허수아비 가동률 (선택)
         const rowScarecrow = document.getElementById('row-scarecrow');
         const rowEfficiency = document.getElementById('row-efficiency');
         if (scarecrow > 0) {
@@ -1295,7 +1233,6 @@
             rowEfficiency.classList.add('hidden');
         }
 
-        // 화면 갱신: 오차 범위 테이블 (±2)
         const tbody = document.getElementById('res-variance-body');
         tbody.innerHTML = '';
         for (let i = -2; i <= 2; i++) {
