@@ -96,23 +96,24 @@
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
 <script>
+    // 본인의 Apps Script 웹 앱 URL이 맞는지 확인하세요.
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
 
     let isCloudConnected = false;
     let isInitialLoad = true;
 
-    // 공유 상태 변수들 (기본 데이터 완전 삭제됨)
+    // 공유 상태 변수들
     window.charactersData = [];
     window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
     window.oState = { mode: 'bound', craftType: 'normal', cat: 'foraging', inv: { bound: { foraging: {w:0,g:0,b:0,p:0}, logging: {w:0,g:0,b:0,p:0}, mining: {w:0,g:0,b:0,p:0}, hunting: {w:0,g:0,b:0,p:0}, fishing: {w:0,g:0,b:0,p:0}, excavating: {w:0,g:0,b:0,p:0} }, tradable: {w:0,g:0,b:0,p:0,t:0} } };
     window.lastWeeklyResetId = null;
     window.hasCheckedWeeklyReset = false;
     
-    // 에러 원인이었던 변수 정상화
     window.configSelectedPlayers = new Set();
     let editingDbId = null;
     let editingCpmId = null;
 
+    // 클라우드 데이터베이스 초기화 (수정 반영)
     async function initCloudDB() {
         const ind = document.getElementById('cloud-indicator');
         const st = document.getElementById('cloud-status');
@@ -161,11 +162,12 @@
             }
         }
         
-        // 화면 그리기는 에러가 나든 성공하든 통신 블록 바깥에서 실행하여 연쇄 충돌 방지
         if(typeof window.renderAll === 'function') window.renderAll();
     }
 
     let saveTimeout = null;
+    
+    // 클라우드 저장 로직 (CORS 해결을 위해 text/plain 통신 반영)
     window.saveToCloud = function() {
         if (!isCloudConnected) return;
 
@@ -184,7 +186,11 @@
             try {
                 await fetch(GAS_WEB_APP_URL, {
                     method: "POST",
-                    body: JSON.stringify(payload)
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8"
+                    },
+                    body: JSON.stringify(payload),
+                    redirect: "follow"
                 });
             } catch(e) {
                 console.error("저장 실패:", e);
@@ -1062,7 +1068,6 @@
             btnElement.innerText = "초기화 중...";
             btnElement.disabled = true;
             
-            // 완전 초기화 시 빈 배열로 만듦 (더미 데이터 삭제 반영)
             window.charactersData = [];
             window.cpmData = { inputs: {}, records: [] };
             
