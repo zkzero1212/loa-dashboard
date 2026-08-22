@@ -92,22 +92,21 @@
 </head>
 <body class="p-3 md:p-5 min-h-screen relative">
 
-<!-- 마우스 호버 커스텀 툴팁 컨테이너 -->
+<!-- 마우스 호버 커스텀 툴팁 컨테이너 (복구됨) -->
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-gray-900 border border-gray-600 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 
 <!-- 토스트 메시지 컨테이너 -->
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-<!-- GAS 백엔드 기반 클라우드 연동 (단일 DB) -->
+<!-- 구글 앱스 스크립트(GAS) 기반 클라우드 연동 (단일 DB) -->
 <script>
-    // 유저님이 발급받으신 GAS 웹앱 URL
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwYaoiEkl7XJ3zACl3GNnNLFOTJZ8mHBISUleEu38dwzOWcPErlxjlNIPSAj8NRj4hM/exec";
-    const ROOM_ID = "MAIN_DB"; // 불필요한 방 분리 제거, 단일 DB 사용
+    // 💡여기에 방금 새로 발급받으신 GAS 웹앱 URL을 입력해주세요!
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
 
     let isCloudConnected = false;
     let isInitialLoad = true;
 
-    // 공유 상태 변수들 (전역 접근을 위해 window 객체에 할당)
+    // 공유 상태 변수들
     window.charactersData = [];
     window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
     window.oState = { mode: 'bound', craftType: 'normal', cat: 'foraging', inv: { bound: { foraging: {w:0,g:0,b:0,p:0}, logging: {w:0,g:0,b:0,p:0}, mining: {w:0,g:0,b:0,p:0}, hunting: {w:0,g:0,b:0,p:0}, fishing: {w:0,g:0,b:0,p:0}, excavating: {w:0,g:0,b:0,p:0} }, tradable: {w:0,g:0,b:0,p:0,t:0} } };
@@ -121,9 +120,24 @@
         const ind = document.getElementById('cloud-indicator');
         const st = document.getElementById('cloud-status');
 
+        if(GAS_WEB_APP_URL.includes("여기에_URL을_붙여넣으세요")) {
+            if (ind && st) {
+                ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]';
+                st.innerHTML = `서버 주소 미입력 (오프라인 모드)`;
+                st.className = 'text-[11px] text-red-400 font-bold tracking-wide flex items-center';
+            }
+            // 로컬 기본값으로라도 화면 띄우기
+            if (typeof window.rawDefaultData !== 'undefined') {
+                window.charactersData = window.rawDefaultData.map(c => ({
+                    dbId: c.id, player: c.player, name: c.name, level: c.level, contents: window.calculateContents(c.level), completed: [], timestamp: Date.now()
+                }));
+            }
+            if(typeof window.renderAll === 'function') window.renderAll();
+            return;
+        }
+
         try {
-            // 구글 시트에서 데이터 가져오기
-            const res = await fetch(`${GAS_WEB_APP_URL}?roomId=${ROOM_ID}`);
+            const res = await fetch(`${GAS_WEB_APP_URL}?roomId=MAIN_DB`);
             const result = await res.json();
 
             if (result.status === "success" && result.data) {
@@ -133,54 +147,48 @@
                 if (data.oreha) window.oState = JSON.parse(data.oreha);
                 if (data.lastWeeklyResetId) window.lastWeeklyResetId = data.lastWeeklyResetId;
 
-                // 주간 초기화 확인
                 if (!window.hasCheckedWeeklyReset && window.charactersData.length > 0) {
                     window.hasCheckedWeeklyReset = true;
                     if(typeof window.checkAndRunWeeklyReset === 'function') window.checkAndRunWeeklyReset();
                 }
-            } else if (isInitialLoad && typeof window.rawDefaultData !== 'undefined') {
-                // 시트가 비어있으면 초기 기본값 적용
-                window.charactersData = window.rawDefaultData.map(c => ({
-                    dbId: c.id, player: c.player, name: c.name, level: c.level, contents: window.calculateContents(c.level), completed: [], timestamp: Date.now()
-                }));
-                window.saveToCloud(); // 기본값 시트에 저장
-            }
+            } 
             
             isInitialLoad = false;
             isCloudConnected = true;
             
-            // 상태 표시 UI 업데이트
             if (ind && st) {
                 ind.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]';
-                st.innerHTML = `클라우드 연동 완료 (단일 DB) <span class="text-gray-300 ml-1.5 font-normal text-[10px] border border-blue-500/50 px-1.5 py-0.5 rounded bg-blue-900/30">동일 링크 접속자 전원 실시간 동기화</span>`;
+                st.innerHTML = `클라우드 연동 완료 (단일 DB) <span class="text-gray-300 ml-1.5 font-normal text-[10px] border border-blue-500/50 px-1.5 py-0.5 rounded bg-blue-900/30">깃허브 접속자 전원 실시간 동기화</span>`;
                 st.className = 'text-[11px] text-blue-400 font-bold tracking-wide flex items-center';
             }
 
-            // 모든 UI 그리기
             if(typeof window.renderAll === 'function') window.renderAll();
 
         } catch(e) { 
             console.error("데이터 연동 중 오류:", e); 
             if (ind && st) {
                 ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]';
-                st.innerHTML = `서버 연결 실패 (오프라인 모드)`;
+                st.innerHTML = `서버 연결 실패 (접근 권한을 확인하세요)`;
                 st.className = 'text-[11px] text-red-400 font-bold tracking-wide flex items-center';
+            }
+            // 오류나도 로컬 데이터로 화면은 띄움
+            if (typeof window.rawDefaultData !== 'undefined' && window.charactersData.length === 0) {
+                window.charactersData = window.rawDefaultData.map(c => ({
+                    dbId: c.id, player: c.player, name: c.name, level: c.level, contents: window.calculateContents(c.level), completed: [], timestamp: Date.now()
+                }));
             }
             if(typeof window.renderAll === 'function') window.renderAll();
         }
     }
 
-    // Google Apps Script 과부하 방지를 위한 디바운스(Debounce) 타이머
     let saveTimeout = null;
-
     window.saveToCloud = function() {
         if (!isCloudConnected) return;
 
-        // 0.5초 안에 추가 요청이 오면 기존 요청 취소 (연속 클릭/타이핑 시 렉 유발 방지)
         if (saveTimeout) clearTimeout(saveTimeout);
         saveTimeout = setTimeout(async () => {
             const payload = {
-                roomId: ROOM_ID,
+                roomId: "MAIN_DB",
                 data: {
                     characters: JSON.stringify(window.charactersData),
                     cpm: JSON.stringify(window.cpmData),
