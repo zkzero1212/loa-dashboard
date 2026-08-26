@@ -117,6 +117,10 @@
     let editingDbId = null;
     let editingCpmId = null;
 
+    // 대시보드 상태 관리
+    window.isTableView = false;
+    window.summaryStates = {}; // 플레이어별 요약보기 접힘 상태 저장 (true: 접힘, false/undefined: 펼침)
+
     async function initCloudDB() {
         const ind = document.getElementById('cloud-indicator');
         const st = document.getElementById('cloud-status');
@@ -141,7 +145,6 @@
                 if (data.cpm) window.cpmData = JSON.parse(data.cpm);
                 if (data.oreha) {
                     let parsed = JSON.parse(data.oreha);
-                    // 과거 데이터 마이그레이션 처리
                     if (parsed.inv && parsed.inv.tradable) {
                         window.oState = { 
                             craftType: parsed.craftType || 'normal', 
@@ -240,9 +243,14 @@
                 <h2 class="text-base md:text-lg font-bold text-white flex items-center gap-2">📋 이번 주 숙제 현황</h2>
                 <p class="text-[11px] text-gray-400 mt-0.5">버튼화된 던전 뱃지를 클릭하면 체크(취소선) 처리됩니다.</p>
             </div>
-            <button onclick="requestResetWeekly(this)" class="mt-2 sm:mt-0 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-600 transition shadow-sm font-semibold flex items-center gap-1">
-                <span>🔄</span> 주간 숙제 전체 초기화
-            </button>
+            <div class="flex gap-2 mt-2 sm:mt-0">
+                <button id="btn-toggle-view" onclick="toggleDashboardMode()" class="text-xs bg-indigo-900/50 hover:bg-indigo-800 text-indigo-200 px-3 py-1.5 rounded border border-indigo-700/50 transition shadow-sm font-semibold flex items-center gap-1">
+                    <span>📊</span> 표로 보기
+                </button>
+                <button onclick="requestResetWeekly(this)" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-600 transition shadow-sm font-semibold flex items-center gap-1">
+                    <span>🔄</span> 주간 숙제 전체 초기화
+                </button>
+            </div>
         </div>
         <div id="dashboard-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <!-- JS 렌더링 -->
@@ -315,13 +323,15 @@
         </div>
     </div>
 
+    <!-- 편의 기능 (CPM, 오레하 등 원본 유지) -->
     <div id="view-tools" class="hidden space-y-4">
         <div class="flex gap-4 border-b border-gray-700/80 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-400 font-bold px-1 py-1 border-b-2 border-blue-500 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-gray-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-amber-400 transition">💰 오레하 계산기</button>
         </div>
-
+        <!-- 원본과 동일하게 유지되는 계산기 코드 부분 생략 없이 모두 포함 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-lg border-t-4 border-t-blue-500 max-w-6xl mx-auto">
+            <!-- (생략 없이 원본 유지) -->
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
                     <div class="mb-5">
@@ -407,7 +417,6 @@
                     </div>
 
                     <div id="cpm-result-area" class="hidden space-y-4">
-                        <!-- CPM 결과 영역 유지 -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-gray-800/80 rounded-xl p-5 border border-gray-600 shadow-inner text-center">
                                 <p class="text-sm text-gray-400 mb-1">현재 CPM</p>
@@ -502,6 +511,7 @@
         </div>
 
         <div id="tool-view-oreha" class="hidden glass-panel p-4 md:p-6 shadow-lg border-t-4 border-t-amber-500 max-w-5xl mx-auto">
+            <!-- (생략 없이 원본 유지) -->
             <div class="mb-6 text-center">
                 <h2 class="text-lg md:text-xl font-bold text-white mb-1 flex items-center justify-center gap-2">
                     <span class="text-amber-400">🔄</span> 어비도스 융화석 최적화 계산기
@@ -539,7 +549,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -555,6 +564,11 @@
     const globalDungeonOrder = [
         '4막싱글', '4막하드', '종막싱글', '종막하드', '성당1단', '성당2단', '성당3단',
         '세르카싱글', '세르카하드', '세르카나메', '벨가노말', '벨가하드', '벨가나메'
+    ];
+
+    // 표로보기 모드 전용 목표 던전 (싱글 등 제외)
+    const tableTargetDungeons = [
+        '4막하드', '종막하드', '세르카하드', '세르카나메', '벨가노말', '벨가하드', '벨가나메'
     ];
 
     window.calculateContents = function(level) {
@@ -683,6 +697,32 @@
         if (tabName === 'config') { renderConfigFilters(); renderConfigTable(); } else if (tabName !== 'tools') { renderAll(); }
     };
 
+    // 요약보기 토글 함수
+    window.toggleSummary = function(player) {
+        window.summaryStates[player] = !window.summaryStates[player];
+        renderDashboard();
+    };
+
+    // 대시보드 모드(카드/표) 전환 함수
+    window.toggleDashboardMode = function() {
+        window.isTableView = !window.isTableView;
+        const btn = document.getElementById('btn-toggle-view');
+        if(window.isTableView) {
+            btn.innerHTML = `<span>💳</span> 카드로 보기`;
+            btn.classList.replace('bg-indigo-900/50', 'bg-blue-900/50');
+            btn.classList.replace('hover:bg-indigo-800', 'hover:bg-blue-800');
+            btn.classList.replace('text-indigo-200', 'text-blue-200');
+            btn.classList.replace('border-indigo-700/50', 'border-blue-700/50');
+        } else {
+            btn.innerHTML = `<span>📊</span> 표로 보기`;
+            btn.classList.replace('bg-blue-900/50', 'bg-indigo-900/50');
+            btn.classList.replace('hover:bg-blue-800', 'hover:bg-indigo-800');
+            btn.classList.replace('text-blue-200', 'text-indigo-200');
+            btn.classList.replace('border-blue-700/50', 'border-indigo-700/50');
+        }
+        renderDashboard();
+    };
+
     function renderDashboard() {
         const container = document.getElementById('dashboard-container');
         container.innerHTML = '';
@@ -695,123 +735,196 @@
 
         for (let player in groupedByPlayer) groupedByPlayer[player].sort((a, b) => b.level - a.level);
 
-        for (const [player, chars] of Object.entries(groupedByPlayer)) {
-            const pColor = getPlayerColor(player);
-            let html = `<div class="glass-panel border-t-4 ${pColor.border} p-3 md:p-4">
-                            <h2 class="text-base md:text-lg font-bold mb-2.5 ${pColor.text} border-b border-gray-700/80 pb-1.5">${player}</h2>`;
-            
-            // --- 요약 박스 로직 ---
-            let summaryHtml = `<div class="bg-gray-800/80 rounded-lg p-2.5 mb-3 border border-gray-700/80 text-xs shadow-inner">
-                <div class="font-bold text-gray-400 mb-1.5 border-b border-gray-700 pb-1 flex items-center gap-1.5"><span class="text-[10px]">📋</span> 주간 숙제 요약</div>
-                <div class="space-y-1.5">`;
-            let hasAnySummary = false;
-            
-            const getDiffStyleInfo = (diffName) => {
-                if(diffName.includes('싱글')) return { col: 1, color: 'text-gray-900', bg: 'bg-white font-bold' };
-                if(diffName.includes('1단')) return { col: 1, color: 'text-green-300', bg: 'bg-green-900/40' };
-                if(diffName.includes('노말')) return { col: 1, color: 'text-blue-300', bg: 'bg-blue-900/40' };
-                if(diffName.includes('2단')) return { col: 2, color: 'text-blue-300', bg: 'bg-blue-900/40' };
-                if(diffName.includes('하드')) return { col: 2, color: 'text-purple-300', bg: 'bg-purple-900/40' };
-                if(diffName.includes('3단')) return { col: 3, color: 'text-purple-300', bg: 'bg-purple-900/40' };
-                if(diffName.includes('나메')) return { col: 3, color: 'text-red-300', bg: 'bg-red-900/40' };
-                return { col: 1, color: 'text-gray-300', bg: 'bg-gray-800' };
-            };
+        if(Object.keys(groupedByPlayer).length === 0) {
+            container.className = "grid grid-cols-1";
+            container.innerHTML = '<div class="col-span-1 lg:col-span-2 text-center text-gray-500 py-10 glass-panel text-sm">등록된 캐릭터가 없습니다. 설정 탭에서 직접 추가해주세요.</div>';
+            return;
+        }
 
-            dungeonCategories.forEach(cat => {
-                let catParts = [];
-                cat.diffs.forEach(diff => {
-                    let totalAssigned = 0;
-                    let totalRemaining = 0;
-                    let assignedNames = [];
-                    let remainingNames = [];
+        if(window.isTableView) {
+            // -- 표로보기 모드 랜더링 --
+            container.className = "grid grid-cols-1"; // 표는 전체 너비 사용
+            let html = `
+                <div class="glass-panel p-4 overflow-x-auto w-full shadow-lg">
+                    <table class="w-full min-w-max text-sm text-gray-300 border-collapse border border-gray-700">
+                        <thead class="bg-gray-800 text-gray-400 text-xs">
+                            <tr>
+                                <th class="border border-gray-700 px-3 py-2 bg-gray-900/80 sticky left-0 z-10" rowspan="2">던전명</th>`;
+            
+            // 플레이어 말머리 생성
+            const players = Object.keys(groupedByPlayer);
+            players.forEach(player => {
+                const chars = groupedByPlayer[player];
+                const pColor = getPlayerColor(player);
+                html += `<th class="border border-gray-700 px-3 py-2 ${pColor.text} text-center" colspan="${chars.length}">${player}</th>`;
+            });
+            html += `</tr><tr>`;
+            
+            // 캐릭터 이름 생성
+            let flatChars = [];
+            players.forEach(player => {
+                const chars = groupedByPlayer[player];
+                chars.forEach(char => {
+                    flatChars.push(char);
+                    const isSupp = supporters.includes(char.name);
+                    html += `<th class="border border-gray-700 px-3 py-2 text-white bg-gray-800/50 text-center">${isSupp ? '<span class="text-yellow-400 mr-0.5">✨</span>' : ''}${char.name}</th>`;
+                });
+            });
+            html += `</tr></thead><tbody class="text-xs">`;
+
+            // 던전 행 생성
+            tableTargetDungeons.forEach(dungeon => {
+                html += `<tr class="hover:bg-gray-800/80 transition">
+                            <td class="border border-gray-700 px-3 py-2 font-bold bg-gray-900/50 text-gray-200 sticky left-0 z-10 text-center">${dungeon.replace('하드', ' 하드').replace('노말', ' 노말').replace('나메', ' 나메')}</td>`;
+                
+                flatChars.forEach(char => {
+                    const hasDungeon = char.contents && char.contents.includes(dungeon);
+                    const isCompleted = char.completed && char.completed.includes(dungeon);
+                    let mark = '';
                     
-                    chars.forEach(char => {
-                        if (char.contents && char.contents.includes(diff)) {
-                            totalAssigned++;
-                            assignedNames.push(char.name);
-                            if (!char.completed || !char.completed.includes(diff)) {
-                                totalRemaining++;
-                                remainingNames.push(char.name);
+                    if (hasDungeon) {
+                        if (isCompleted) {
+                            mark = `<span class="text-gray-600 font-bold text-sm">O</span>`;
+                        } else {
+                            mark = `<span class="text-green-400 font-bold text-sm drop-shadow-[0_0_2px_rgba(74,222,128,0.8)]">O</span>`;
+                        }
+                    }
+                    
+                    // 클릭하여 바로 완료 여부 전환할 수 있도록 편의성 추가
+                    html += `<td class="border border-gray-700 px-3 py-2 text-center cursor-pointer transition hover:bg-gray-700/50" onclick="if('${hasDungeon}'==='true') toggleCompletion('${char.dbId}', '${dungeon}')">${mark}</td>`;
+                });
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+
+        } else {
+            // -- 기존 카드로보기 모드 랜더링 --
+            container.className = "grid grid-cols-1 lg:grid-cols-2 gap-4";
+            
+            for (const [player, chars] of Object.entries(groupedByPlayer)) {
+                const pColor = getPlayerColor(player);
+                const isCollapsed = window.summaryStates[player]; // 접힘 상태 확인
+                
+                let html = `<div class="glass-panel border-t-4 ${pColor.border} p-3 md:p-4">
+                                <h2 class="text-base md:text-lg font-bold mb-2.5 ${pColor.text} border-b border-gray-700/80 pb-1.5 flex justify-between items-center">
+                                    <span>${player}</span>
+                                    <button onclick="toggleSummary('${player}')" class="text-[11px] font-normal text-gray-400 hover:text-white transition flex items-center gap-1 bg-gray-800/50 px-2 py-0.5 rounded border border-gray-700">
+                                        요약보기 ${isCollapsed ? '▼' : '▲'}
+                                    </button>
+                                </h2>`;
+                
+                // --- 요약 박스 로직 ---
+                let summaryHtml = `<div id="summary-${player}" class="${isCollapsed ? 'hidden' : 'block'}">
+                                    <div class="bg-gray-800/80 rounded-lg p-2.5 mb-3 border border-gray-700/80 text-xs shadow-inner">
+                    <div class="font-bold text-gray-400 mb-1.5 border-b border-gray-700 pb-1 flex items-center gap-1.5"><span class="text-[10px]">📋</span> 주간 숙제 요약</div>
+                    <div class="space-y-1.5">`;
+                let hasAnySummary = false;
+                
+                const getDiffStyleInfo = (diffName) => {
+                    if(diffName.includes('싱글')) return { col: 1, color: 'text-gray-900', bg: 'bg-white font-bold' };
+                    if(diffName.includes('1단')) return { col: 1, color: 'text-green-300', bg: 'bg-green-900/40' };
+                    if(diffName.includes('노말')) return { col: 1, color: 'text-blue-300', bg: 'bg-blue-900/40' };
+                    if(diffName.includes('2단')) return { col: 2, color: 'text-blue-300', bg: 'bg-blue-900/40' };
+                    if(diffName.includes('하드')) return { col: 2, color: 'text-purple-300', bg: 'bg-purple-900/40' };
+                    if(diffName.includes('3단')) return { col: 3, color: 'text-purple-300', bg: 'bg-purple-900/40' };
+                    if(diffName.includes('나메')) return { col: 3, color: 'text-red-300', bg: 'bg-red-900/40' };
+                    return { col: 1, color: 'text-gray-300', bg: 'bg-gray-800' };
+                };
+
+                dungeonCategories.forEach(cat => {
+                    let catParts = [];
+                    cat.diffs.forEach(diff => {
+                        let totalAssigned = 0;
+                        let totalRemaining = 0;
+                        let assignedNames = [];
+                        let remainingNames = [];
+                        
+                        chars.forEach(char => {
+                            if (char.contents && char.contents.includes(diff)) {
+                                totalAssigned++;
+                                assignedNames.push(char.name);
+                                if (!char.completed || !char.completed.includes(diff)) {
+                                    totalRemaining++;
+                                    remainingNames.push(char.name);
+                                }
                             }
+                        });
+                        
+                        if (totalAssigned > 0) {
+                            let diffName = diff.replace(cat.id, ''); 
+                            if (!diffName) diffName = diff;
+                            let style = getDiffStyleInfo(diffName);
+                            
+                            let boxClass = `col-start-${style.col} flex items-center justify-between gap-1 px-1.5 py-0.5 rounded border border-gray-700/50 w-full max-w-[90px] cursor-help transition-all`;
+                            let badgeClass = `${style.color} font-bold text-[10px] ${style.bg} px-1 rounded whitespace-nowrap`;
+                            
+                            let remainingClass = "text-white font-black text-[12px]";
+                            let totalClass = "text-gray-500 font-medium text-[9px]";
+                            
+                            if (totalRemaining === 0) {
+                                boxClass += " bg-gray-800/40 opacity-40 grayscale line-through border-transparent";
+                                badgeClass = "text-gray-400 font-bold text-[10px] bg-gray-700/80 px-1 rounded whitespace-nowrap line-through border-transparent";
+                                remainingClass = "text-gray-500 font-bold text-[12px] line-through";
+                                totalClass = "text-gray-600 font-medium text-[9px] line-through";
+                            } else {
+                                boxClass += " bg-gray-900/40";
+                            }
+                            
+                            let tooltipData = `data-assigned="${assignedNames.join(', ')}" data-remaining="${remainingNames.join(', ')}"`;
+                            
+                            catParts.push(`<div onmouseenter="showTooltip(event, this)" onmouseleave="hideTooltip()" ${tooltipData} class="${boxClass}">
+                                <span class="${badgeClass}">${diffName}</span>
+                                <div class="flex items-baseline gap-0.5 whitespace-nowrap">
+                                    <span class="${remainingClass}">${totalRemaining}</span>
+                                    <span class="${totalClass}">/${totalAssigned}</span>
+                                </div>
+                            </div>`);
                         }
                     });
                     
-                    if (totalAssigned > 0) {
-                        let diffName = diff.replace(cat.id, ''); 
-                        if (!diffName) diffName = diff;
-                        let style = getDiffStyleInfo(diffName);
-                        
-                        let boxClass = `col-start-${style.col} flex items-center justify-between gap-1 px-1.5 py-0.5 rounded border border-gray-700/50 w-full max-w-[90px] cursor-help transition-all`;
-                        let badgeClass = `${style.color} font-bold text-[10px] ${style.bg} px-1 rounded whitespace-nowrap`;
-                        
-                        let remainingClass = "text-white font-black text-[12px]";
-                        let totalClass = "text-gray-500 font-medium text-[9px]";
-                        
-                        if (totalRemaining === 0) {
-                            boxClass += " bg-gray-800/40 opacity-40 grayscale line-through border-transparent";
-                            badgeClass = "text-gray-400 font-bold text-[10px] bg-gray-700/80 px-1 rounded whitespace-nowrap line-through border-transparent";
-                            remainingClass = "text-gray-500 font-bold text-[12px] line-through";
-                            totalClass = "text-gray-600 font-medium text-[9px] line-through";
-                        } else {
-                            boxClass += " bg-gray-900/40";
-                        }
-                        
-                        let tooltipData = `data-assigned="${assignedNames.join(', ')}" data-remaining="${remainingNames.join(', ')}"`;
-                        
-                        catParts.push(`<div onmouseenter="showTooltip(event, this)" onmouseleave="hideTooltip()" ${tooltipData} class="${boxClass}">
-                            <span class="${badgeClass}">${diffName}</span>
-                            <div class="flex items-baseline gap-0.5 whitespace-nowrap">
-                                <span class="${remainingClass}">${totalRemaining}</span>
-                                <span class="${totalClass}">/${totalAssigned}</span>
+                    if (catParts.length > 0) {
+                        hasAnySummary = true;
+                        let displayLabel = cat.label === '벨가르딘' ? '벨가' : cat.label;
+                        summaryHtml += `<div class="flex items-center gap-2 border-b border-gray-700/40 last:border-0 pb-1.5 last:pb-0">
+                            <span class="text-gray-300 font-bold w-9 shrink-0 text-center bg-gray-700/50 rounded py-0.5 shadow-sm text-[11px]">${displayLabel}</span>
+                            <div class="grid grid-cols-3 gap-x-2 gap-y-1 items-center flex-1">
+                                ${catParts.join('')}
                             </div>
-                        </div>`);
+                        </div>`;
                     }
                 });
+                summaryHtml += `</div></div></div>`; // 래퍼 div까지 닫기
+                if (hasAnySummary) html += summaryHtml;
+                // --- 요약 박스 끝 ---
+
+                html += `<div class="flex flex-col gap-1.5">`; 
                 
-                if (catParts.length > 0) {
-                    hasAnySummary = true;
-                    let displayLabel = cat.label === '벨가르딘' ? '벨가' : cat.label;
-                    summaryHtml += `<div class="flex items-center gap-2 border-b border-gray-700/40 last:border-0 pb-1.5 last:pb-0">
-                        <span class="text-gray-300 font-bold w-9 shrink-0 text-center bg-gray-700/50 rounded py-0.5 shadow-sm text-[11px]">${displayLabel}</span>
-                        <div class="grid grid-cols-3 gap-x-2 gap-y-1 items-center flex-1">
-                            ${catParts.join('')}
-                        </div>
-                    </div>`;
-                }
-            });
-            summaryHtml += `</div></div>`;
-            if (hasAnySummary) html += summaryHtml;
-            // --- 요약 박스 끝 ---
+                chars.forEach(char => {
+                    const contentsHtml = `<div class="grid grid-cols-5 gap-1 md:gap-1.5 w-full sm:w-[280px] md:w-[380px] shrink-0 sm:ml-auto">` + dungeonCategories.map(cat => {
+                        const c = cat.diffs.find(diff => char.contents && char.contents.includes(diff));
+                        if (c) {
+                            const isCompleted = char.completed && char.completed.includes(c);
+                            return `<span onclick="toggleCompletion('${char.dbId}', '${c}')" class="dungeon-badge w-full !m-0 h-full text-[9px] md:text-[11px] px-0.5 py-1 md:py-1.5 rounded font-medium tracking-tighter ${getDiffStyle(c)} ${isCompleted ? 'completed' : ''}">${c}</span>`;
+                        }
+                        return `<span></span>`;
+                    }).join('') + `</div>`;
+                    
+                    const isSupp = supporters.includes(char.name);
+                    const cardClass = isSupp ? 'supporter-glow border-gray-600' : 'bg-gray-800/60 border-gray-700/50 hover:bg-gray-700/80';
 
-            html += `<div class="flex flex-col gap-1.5">`; 
-            
-            chars.forEach(char => {
-                const contentsHtml = `<div class="grid grid-cols-5 gap-1 md:gap-1.5 w-full sm:w-[280px] md:w-[380px] shrink-0 sm:ml-auto">` + dungeonCategories.map(cat => {
-                    const c = cat.diffs.find(diff => char.contents && char.contents.includes(diff));
-                    if (c) {
-                        const isCompleted = char.completed && char.completed.includes(c);
-                        return `<span onclick="toggleCompletion('${char.dbId}', '${c}')" class="dungeon-badge w-full !m-0 h-full text-[9px] md:text-[11px] px-0.5 py-1 md:py-1.5 rounded font-medium tracking-tighter ${getDiffStyle(c)} ${isCompleted ? 'completed' : ''}">${c}</span>`;
-                    }
-                    return `<span></span>`;
-                }).join('') + `</div>`;
-                
-                const isSupp = supporters.includes(char.name);
-                const cardClass = isSupp ? 'supporter-glow border-gray-600' : 'bg-gray-800/60 border-gray-700/50 hover:bg-gray-700/80';
-
-                html += `<div class="rounded-lg p-2 md:p-2.5 border flex flex-col sm:flex-row sm:items-center justify-between transition gap-1.5 ${cardClass}">
-                            <div class="flex items-center gap-1.5 whitespace-nowrap min-w-max">
-                                <span class="font-bold text-sm text-white">${isSupp ? '<span class="text-yellow-400 mr-0.5 text-xs">✨</span>' : ''}${char.name}</span>
-                                <span class="text-[11px] md:text-xs text-gray-300 font-medium">Lv.${char.level}</span>
-                            </div>
-                            ${contentsHtml}
-                        </div>`;
-            });
-            html += `</div></div>`;
-            container.innerHTML += html;
-        }
-
-        if(Object.keys(groupedByPlayer).length === 0) {
-            container.innerHTML = '<div class="col-span-1 lg:col-span-2 text-center text-gray-500 py-10 glass-panel text-sm">등록된 캐릭터가 없습니다. 설정 탭에서 직접 추가해주세요.</div>';
+                    html += `<div class="rounded-lg p-2 md:p-2.5 border flex flex-col sm:flex-row sm:items-center justify-between transition gap-1.5 ${cardClass}">
+                                <div class="flex items-center gap-1.5 whitespace-nowrap min-w-max">
+                                    <span class="font-bold text-sm text-white">${isSupp ? '<span class="text-yellow-400 mr-0.5 text-xs">✨</span>' : ''}${char.name}</span>
+                                    <span class="text-[11px] md:text-xs text-gray-300 font-medium">Lv.${char.level}</span>
+                                </div>
+                                ${contentsHtml}
+                            </div>`;
+                });
+                html += `</div></div>`;
+                container.innerHTML += html;
+            }
         }
     }
 
