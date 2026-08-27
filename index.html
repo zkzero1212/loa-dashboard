@@ -18,6 +18,7 @@
             border-radius: 1rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
+        
         .tab-btn { transition: all 0.3s; color: #475569; background-color: #ffffff; }
         .tab-btn:hover { background-color: #f1f5f9; }
         .tab-btn.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border-color: transparent; }
@@ -31,6 +32,7 @@
         }
         .dungeon-badge:hover { transform: translateY(-1px); box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1); }
         .dungeon-badge:active { transform: translateY(0); }
+        
         .dungeon-badge.completed {
             text-decoration: line-through; opacity: 0.5; filter: grayscale(100%);
             background: #f1f5f9 !important; border-color: #e2e8f0 !important;
@@ -64,116 +66,15 @@
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-white border border-slate-200 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
+<!-- 파티 배정 드롭다운 메뉴 -->
 <div id="dropdown-menu" class="hidden fixed bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden text-sm min-w-[150px]">
     <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 font-bold text-slate-600 text-[11px]">캐릭터 선택</div>
     <ul id="dropdown-list" class="max-h-60 overflow-y-auto"></ul>
 </div>
 
-<script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
-
-    let isCloudConnected = false;
-    let isInitialLoad = true;
-
-    window.charactersData = [];
-    window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
-    window.partyData = []; // 배열 형태로 변경됨
-    window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
-    
-    window.lastWeeklyResetId = null;
-    window.hasCheckedWeeklyReset = false;
-    window.configSelectedPlayers = new Set();
-    let editingDbId = null;
-    let editingCpmId = null;
-
-    // 대시보드 모드: 'party' (파티 짜기 기본값) | 'personal'
-    window.dashboardMode = 'party';
-    window.summaryStates = {}; 
-    window.partyBoardFilters = new Set(['4막', '종막', '성당', '세르카', '벨가']); // 파티 보드 필터
-
-    async function initCloudDB() {
-        const ind = document.getElementById('cloud-indicator');
-        const st = document.getElementById('cloud-status');
-
-        try {
-            const res = await fetch(`${GAS_WEB_APP_URL}?roomId=MAIN_DB`);
-            const result = await res.json();
-
-            if (result.status === "success" && result.data) {
-                const data = result.data;
-                
-                // 파싱 중 에러 발생 시 전체 로드가 중단되는 것을 막기 위한 안전장치 추가
-                try { if (data.characters) window.charactersData = JSON.parse(data.characters); } catch(e) { window.charactersData = []; }
-                try { if (data.cpm) window.cpmData = JSON.parse(data.cpm); } catch(e) {}
-                try {
-                    if (data.party) {
-                        let parsedParty = JSON.parse(data.party);
-                        window.partyData = Array.isArray(parsedParty) ? parsedParty : [];
-                    }
-                } catch(e) { window.partyData = []; }
-                
-                try {
-                    if (data.oreha) {
-                        let parsed = JSON.parse(data.oreha);
-                        if (parsed.inv && parsed.inv.tradable) {
-                            window.oState = { craftType: parsed.craftType || 'normal', inv: parsed.inv.tradable, prices: window.oState.prices };
-                        } else {
-                            window.oState = parsed;
-                            if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0};
-                        }
-                    }
-                } catch(e) {}
-
-                if (data.lastWeeklyResetId) window.lastWeeklyResetId = data.lastWeeklyResetId;
-
-                if (!window.hasCheckedWeeklyReset && window.charactersData.length > 0) {
-                    window.hasCheckedWeeklyReset = true;
-                    window.checkAndRunWeeklyReset();
-                }
-            } 
-            
-            isInitialLoad = false;
-            isCloudConnected = true;
-            
-            if (ind && st) {
-                ind.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm';
-                st.innerHTML = `연동 완료 <span class="text-slate-500 ml-1.5 font-normal text-[10px] border border-blue-200 px-1.5 py-0.5 rounded bg-blue-50">동기화 중</span>`;
-                st.className = 'text-[11px] text-blue-600 font-bold tracking-wide flex items-center';
-            }
-        } catch(e) { 
-            console.error("클라우드 연결 에러:", e);
-            if (ind && st) {
-                ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm';
-                st.innerHTML = `서버 연결 실패`;
-                st.className = 'text-[11px] text-red-500 font-bold tracking-wide flex items-center';
-            }
-        }
-        if(typeof window.renderAll === 'function') window.renderAll();
-    }
-
-    let saveTimeout = null;
-    window.saveToCloud = function() {
-        if (!isCloudConnected) return;
-        if (saveTimeout) clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(async () => {
-            const payload = {
-                roomId: "MAIN_DB",
-                data: {
-                    characters: JSON.stringify(window.charactersData),
-                    cpm: JSON.stringify(window.cpmData),
-                    party: JSON.stringify(window.partyData),
-                    oreha: JSON.stringify(window.oState),
-                    lastWeeklyResetId: window.lastWeeklyResetId || ''
-                }
-            };
-            try { await fetch(GAS_WEB_APP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload), redirect: "follow" }); } catch(e) {}
-        }, 500);
-    };
-
-    setTimeout(initCloudDB, 300);
-</script>
-
+<!-- 가로폭을 95%로 넓게 사용하도록 래퍼 구성 -->
 <div class="max-w-[95%] mx-auto space-y-5 pb-10">
+    
     <div class="flex justify-end items-center gap-2 mb-1">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse"></span>
         <span id="cloud-status" class="text-[11px] text-orange-500 font-bold tracking-wide">클라우드 연결 중...</span>
@@ -184,6 +85,7 @@
         <p class="text-xs md:text-sm text-slate-500">칸반 보드 기반 파티 플래너 / 와이드 뷰 지원 / 수요일 자동 리셋</p>
     </div>
 
+    <!-- 네비게이션 탭 -->
     <div class="flex flex-wrap justify-center gap-2 mb-4">
         <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">📊 대시보드</button>
         <button onclick="switchTab('filter')" id="tab-filter" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">🔍 던전 파티 검색</button>
@@ -191,6 +93,7 @@
         <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
+    <!-- 1. 대시보드 -->
     <div id="view-dashboard" class="space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
             <div>
@@ -211,6 +114,7 @@
         </div>
     </div>
 
+    <!-- 2. 파티 필터 검색 -->
     <div id="view-filter" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm">
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
@@ -221,6 +125,7 @@
         </div>
     </div>
 
+    <!-- 3. 캐릭터 설정 -->
     <div id="view-config" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm border-l-4 border-l-green-500" id="form-panel">
             <h2 id="form-title" class="text-base font-bold mb-3 text-slate-800 flex items-center gap-2"><span>➕</span> 캐릭터 등록 / 수정 (자동 계산)</h2>
@@ -237,12 +142,13 @@
         </div>
     </div>
 
+    <!-- 4. 편의 기능 (CPM, 오레하) -->
     <div id="view-tools" class="hidden space-y-4">
         <div class="flex gap-4 border-b border-slate-200 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
         </div>
-        
+
         <!-- CPM 계산기 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 max-w-6xl mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
@@ -303,7 +209,8 @@
 </div>
 
 <script>
-    // 기초 데이터 및 유틸
+    const GAS_WEB_APP_URL_SCRIPT = GAS_WEB_APP_URL; // Using the global defined above
+
     const dungeonCategories = [
         { id: '4막', label: '4막', diffs: ['4막싱글', '4막하드'] },
         { id: '종막', label: '종막', diffs: ['종막싱글', '종막하드'] },
@@ -393,7 +300,6 @@
         if (tooltip) { tooltip.classList.remove('opacity-100'); tooltip.classList.add('opacity-0'); }
     };
 
-    // 주간 초기화 로직
     window.checkAndRunWeeklyReset = function() {
         const now = new Date();
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -421,7 +327,6 @@
         }
     };
 
-    // 헬퍼: 캐릭터의 던전 클리어 최종 여부 반환 (개별 + 파티 동기화)
     window.isCharClearedDungeon = function(char, fullDiffStr) {
         if (char.completed && char.completed.includes(fullDiffStr)) return true;
         if (Array.isArray(window.partyData)) {
@@ -623,7 +528,8 @@
                 <span class="text-xs font-bold text-slate-500 mr-1">🔍 보드 필터:</span>
                 ${partyDungeonCategories.map(cat => {
                     const isActive = window.partyBoardFilters.has(cat.id);
-                    return \`<button onclick="togglePartyBoardFilter('\${cat.id}')" class="px-3 py-1 rounded-full text-xs font-bold border transition \${isActive ? 'bg-slate-600 text-white border-transparent' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-100'}">\${cat.name}</button>\`;
+                    const btnClass = isActive ? 'bg-slate-600 text-white border-transparent' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-100';
+                    return '<button onclick="togglePartyBoardFilter(\\'' + cat.id + '\\')" class="px-3 py-1 rounded-full text-xs font-bold border transition ' + btnClass + '">' + cat.name + '</button>';
                 }).join('')}
             </div>
         `;
@@ -728,7 +634,7 @@
             });
 
             // 난이도별 파티 추가 버튼 (호버 시 드롭다운)
-            let diffButtons = cat.diffs.map(d => `<button onclick="addParty('${cat.id}', '${d.name}', ${d.level})" class="px-2 py-1 text-[10px] font-bold rounded ${d.color} hover:brightness-95 shadow-sm transition">${d.name}</button>`).join('');
+            let diffButtons = cat.diffs.map(d => '<button onclick="addParty(\\'' + cat.id + '\\', \\'' + d.name + '\\', ' + d.level + ')" class="px-2 py-1 text-[10px] font-bold rounded ' + d.color + ' hover:brightness-95 shadow-sm transition">' + d.name + '</button>').join('');
             
             boardHtml += `</div>
                           <div class="group relative w-full mt-1">
@@ -875,7 +781,6 @@
     window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
     document.addEventListener('click', (e) => { if (!e.target.closest('#dropdown-menu')) closeDropdown(); });
 
-    let selectedCategories = new Set();
     window.toggleFilter = function(categoryId) {
         if (selectedCategories.has(categoryId)) selectedCategories.delete(categoryId);
         else selectedCategories.add(categoryId);
@@ -1100,6 +1005,29 @@
         }
     };
 
+    window.requestResetWeekly = function(btnElement) {
+        if (btnElement.innerText.includes("확실합니까?")) {
+            window.charactersData.forEach(char => char.completed = []);
+            for (let dId in window.partyData) {
+                if (window.partyData[dId]) window.partyData[dId].isCleared = false;
+            }
+            window.saveToCloud(); 
+            renderAll();
+            btnElement.innerHTML = `<span>🔄</span> 주간 숙제 전체 초기화`;
+            btnElement.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
+            showToast('주간 완료 기록이 모두 초기화되었습니다.');
+        } else {
+            btnElement.innerHTML = `<span>⚠️</span> 정말 확실합니까? (한번 더 클릭)`;
+            btnElement.className = "text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition shadow-sm font-bold flex items-center gap-1";
+            setTimeout(() => {
+                if (btnElement.innerText.includes("확실합니까?")) {
+                    btnElement.innerHTML = `<span>🔄</span> 주간 숙제 전체 초기화`;
+                    btnElement.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
+                }
+            }, 3000);
+        }
+    };
+
     window.requestReset = function(btnElement) {
         if (btnElement.innerText === "확인") {
             window.charactersData = [];
@@ -1121,6 +1049,7 @@
         }
     };
 
+    // --- [ 편의 기능 탭 및 CPM 계산기 ] ---
     window.switchToolTab = function(tabName) {
         const tabCpm = document.getElementById('tool-tab-cpm');
         const tabOreha = document.getElementById('tool-tab-oreha');
@@ -1363,6 +1292,7 @@
         }
     };
 
+    // --- [ 오레하 계산기 로직 (라이트 테마 변경) ] ---
     const OREHA_REQ = { normal: { w: 86, g: 45, b: 33, gold: 384, name: '하급 어비도스 융화석' }, advanced: { w: 112, g: 59, b: 43, gold: 499, name: '상급 어비도스 융화석' } };
 
     window.setOrehaType = function(type) { window.oState.craftType = type; window.saveToCloud(); renderOrehaUI(); }
