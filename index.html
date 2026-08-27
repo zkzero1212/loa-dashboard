@@ -87,10 +87,9 @@
     let editingDbId = null;
     let editingCpmId = null;
 
-    // 대시보드 모드: 'party' (기본값) | 'personal'
     window.dashboardMode = 'party';
     window.summaryStates = {}; 
-    window.partyBoardFilters = new Set(['4막', '종막', '성당', '세르카', '벨가']); // 파티 보드 필터
+    window.partyBoardFilters = new Set(['4막', '종막', '성당', '세르카', '벨가']); 
 
     async function initCloudDB() {
         const ind = document.getElementById('cloud-indicator');
@@ -114,10 +113,17 @@
                 const data = result.data;
                 if (data.characters) window.charactersData = JSON.parse(data.characters);
                 if (data.cpm) window.cpmData = JSON.parse(data.cpm);
+                
+                // 파티 데이터 파싱 (안전 장치 추가)
                 if (data.party) {
-                    let parsedParty = JSON.parse(data.party);
-                    window.partyData = Array.isArray(parsedParty) ? parsedParty : [];
+                    try {
+                        let parsedParty = JSON.parse(data.party);
+                        window.partyData = Array.isArray(parsedParty) ? parsedParty : [];
+                    } catch(e) { window.partyData = []; }
+                } else {
+                    window.partyData = [];
                 }
+                
                 if (data.oreha) {
                     let parsed = JSON.parse(data.oreha);
                     if (parsed.inv && parsed.inv.tradable) {
@@ -163,7 +169,7 @@
                 data: {
                     characters: JSON.stringify(window.charactersData),
                     cpm: JSON.stringify(window.cpmData),
-                    party: JSON.stringify(window.partyData),
+                    party: JSON.stringify(window.partyData), 
                     oreha: JSON.stringify(window.oState),
                     lastWeeklyResetId: window.lastWeeklyResetId || ''
                 }
@@ -175,7 +181,6 @@
     setTimeout(initCloudDB, 300);
 </script>
 
-<!-- 가로폭을 95%로 넓게 사용하도록 수정됨 -->
 <div class="max-w-[95%] mx-auto space-y-5 pb-10">
     <div class="flex justify-end items-center gap-2 mb-1">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse"></span>
@@ -194,7 +199,6 @@
         <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
-    <!-- 1. 대시보드 -->
     <div id="view-dashboard" class="space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
             <div>
@@ -215,7 +219,6 @@
         </div>
     </div>
 
-    <!-- 2. 파티 필터 검색 -->
     <div id="view-filter" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm">
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
@@ -226,7 +229,6 @@
         </div>
     </div>
 
-    <!-- 3. 캐릭터 설정 -->
     <div id="view-config" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm border-l-4 border-l-green-500" id="form-panel">
             <h2 id="form-title" class="text-base font-bold mb-3 text-slate-800 flex items-center gap-2"><span>➕</span> 캐릭터 등록 / 수정 (자동 계산)</h2>
@@ -249,7 +251,6 @@
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
         </div>
-        <!-- CPM 계산기 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 max-w-6xl mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
@@ -274,7 +275,6 @@
                     </div>
                     <div><label class="block text-[11px] text-slate-500 font-bold mb-1">패턴·컷신 제외 시간 (선택)</label><div class="flex items-center"><input type="number" id="cpm-exclude" min="0" value="0" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right"><span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">초</span></div></div>
                     <div class="flex justify-center gap-2 my-5"><button onclick="runCpmCalculation()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded shadow-md transition flex items-center gap-2">📊 계산하기</button><button onclick="resetCpmForm()" class="bg-white hover:bg-slate-50 text-slate-600 font-bold py-2.5 px-6 rounded shadow-sm transition border border-slate-300">초기화</button></div>
-                    
                     <div id="cpm-result-area" class="hidden space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm text-center"><p class="text-sm font-bold text-slate-500 mb-1">현재 CPM</p><p class="text-3xl font-black text-slate-800 flex items-center justify-center gap-2"><span class="text-yellow-500">⚡</span> <span id="res-current-cpm">0.00</span> <span class="text-lg text-slate-400 font-medium">회/분</span></p></div>
@@ -426,7 +426,6 @@
         }
     };
 
-    // --- [ 헬퍼: 캐릭터의 던전 클리어 최종 여부 반환 (개별 + 파티 동기화) ] ---
     window.isCharClearedDungeon = function(char, fullDiffStr) {
         if (char.completed && char.completed.includes(fullDiffStr)) return true;
         if (Array.isArray(window.partyData)) {
@@ -435,7 +434,6 @@
         return false;
     };
 
-    // --- [ 탭 및 모드 전환 로직 ] ---
     window.renderAll = function() {
         renderDashboard(); 
         renderFilterResults(); 
@@ -497,7 +495,6 @@
         else renderPartyDashboard(container);
     }
 
-    // --- [ 개인 숙제 대시보드 렌더링 ] ---
     function renderPersonalDashboard(container) {
         container.className = "grid grid-cols-1 lg:grid-cols-2 gap-4";
         const groupedByPlayer = window.charactersData.reduce((acc, char) => {
@@ -510,7 +507,6 @@
 
         for (const [player, chars] of Object.entries(groupedByPlayer)) {
             const pColor = getPlayerColor(player);
-            // summaryStates가 명시적으로 true일때만 열림. (기본 undefined는 닫힘)
             const isExpanded = window.summaryStates[player] === true; 
             
             let html = `<div class="glass-panel border-t-4 ${pColor.border} p-3 md:p-4 bg-white">
@@ -622,11 +618,9 @@
         }
     }
 
-    // --- [ 5열 칸반 보드 (파티 짜기) 렌더링 ] ---
     function renderPartyDashboard(container) {
         container.className = "flex flex-col gap-4 h-full";
         
-        // 필터 UI (파티 보드 전용)
         let filterHtml = `
             <div class="glass-panel p-3 flex flex-wrap gap-2 items-center shadow-sm bg-white">
                 <span class="text-xs font-bold text-slate-500 mr-1">🔍 보드 필터:</span>
@@ -639,7 +633,6 @@
         
         let mainContent = `<div class="flex flex-col lg:flex-row gap-4 overflow-hidden h-full">`;
 
-        // 1. 좌측 얇은 명단 패널
         let rosterHtml = `
             <div class="lg:w-48 shrink-0 flex flex-col">
                 <div class="glass-panel p-3 sticky top-4 max-h-[85vh] overflow-y-auto">
@@ -673,7 +666,6 @@
         }
         rosterHtml += `</div></div></div>`;
 
-        // 2. 우측 칸반 보드 패널 (필터링 적용)
         let boardHtml = `<div class="flex-grow flex gap-4 overflow-x-auto pb-4 items-start">`;
         
         partyDungeonCategories.filter(cat => window.partyBoardFilters.has(cat.id)).forEach(cat => {
@@ -738,7 +730,6 @@
                 boardHtml += `</div></div>`;
             });
 
-            // 난이도별 파티 추가 버튼 (호버 시 드롭다운)
             let diffButtons = cat.diffs.map(d => `<button onclick="addParty('${cat.id}', '${d.name}', ${d.level})" class="px-2 py-1 text-[10px] font-bold rounded ${d.color} hover:brightness-95 shadow-sm transition">${d.name}</button>`).join('');
             
             boardHtml += `</div>
@@ -756,32 +747,21 @@
         container.innerHTML = filterHtml + mainContent;
     }
 
-    // --- [ 파티 생성 및 배정 로직 ] ---
     window.addParty = function(catId, diffName, diffLevel) {
         if (!Array.isArray(window.partyData)) window.partyData = [];
-        window.partyData.push({
-            id: 'party_' + Date.now(),
-            cat: catId,
-            diff: diffName,
-            level: diffLevel,
-            slots: [null, null, null, null],
-            isCleared: false
-        });
-        window.saveToCloud();
-        renderDashboard();
+        window.partyData.push({ id: 'party_' + Date.now(), cat: catId, diff: diffName, level: diffLevel, slots: [null, null, null, null], isCleared: false });
+        window.saveToCloud(); renderDashboard();
     };
 
     window.deleteParty = function(partyId) {
         window.partyData = window.partyData.filter(p => p.id !== partyId);
-        window.saveToCloud();
-        renderDashboard();
+        window.saveToCloud(); renderDashboard();
     };
 
     window.toggleCompletion = function(dbId, content) {
         const char = window.charactersData.find(c => c.dbId === dbId);
         if (!char) return;
 
-        // 예외 차단: 파티 단위로 클리어 된 경우 개별 조작 금지
         if (Array.isArray(window.partyData)) {
             const clearedViaParty = window.partyData.some(p => (p.cat + p.diff) === content && p.isCleared && p.slots.includes(dbId));
             if (clearedViaParty) {
@@ -794,8 +774,7 @@
         if (completed.includes(content)) completed = completed.filter(c => c !== content);
         else completed.push(content);
         char.completed = completed;
-        window.saveToCloud(); 
-        renderAll();
+        window.saveToCloud(); renderAll();
     };
 
     window.dragStart = function(e, charId) { e.dataTransfer.setData('charId', charId); closeDropdown(); };
@@ -821,24 +800,20 @@
         if (existingIndex > -1) party.slots[existingIndex] = null;
 
         party.slots[slotIndex] = charId;
-        window.saveToCloud();
-        renderDashboard();
+        window.saveToCloud(); renderDashboard();
     };
 
     window.removeCharacterFromSlot = function(e, partyId, slotIndex) {
         e.stopPropagation(); 
         const party = window.partyData.find(p => p.id === partyId);
         if(party) party.slots[slotIndex] = null;
-        window.saveToCloud();
-        renderDashboard();
-        closeDropdown();
+        window.saveToCloud(); renderDashboard(); closeDropdown();
     };
 
     window.togglePartyCleared = function(partyId) {
         const party = window.partyData.find(p => p.id === partyId);
         if(party) party.isCleared = !party.isCleared;
-        window.saveToCloud();
-        renderAll();
+        window.saveToCloud(); renderAll();
     };
 
     let currentDropdownTarget = null;
@@ -887,8 +862,6 @@
     window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
     document.addEventListener('click', (e) => { if (!e.target.closest('#dropdown-menu')) closeDropdown(); });
 
-    // --- [ 검색 필터 (개인 숙제 탭) ] ---
-    let selectedCategories = new Set();
     window.toggleFilter = function(categoryId) {
         if (selectedCategories.has(categoryId)) selectedCategories.delete(categoryId);
         else selectedCategories.add(categoryId);
@@ -932,7 +905,6 @@
                 const charsInDiff = window.charactersData.filter(char => char.contents && char.contents.includes(diff));
                 totalCharsInCategory += charsInDiff.length;
                 const gridColsClass = allPlayers.length > 2 ? 'grid-cols-2 sm:grid-cols-4' : `grid-cols-${allPlayers.length || 1}`;
-
                 const isSingleGroup = diff.includes('싱글');
                 const borderClass = isSingleGroup ? 'border-slate-300 border-dashed border-[2px]' : 'border-slate-200 border';
                 const singleLabel = isSingleGroup ? `<span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[9px] ml-1 font-bold">👤 솔로</span>` : '';
@@ -958,9 +930,7 @@
                                 <div class="flex flex-col gap-1 flex-grow">`;
 
                     if (playerChars.length === 0) {
-                        html += `<div class="flex-1 flex items-center justify-center min-h-[30px] bg-slate-50 rounded border border-slate-200 border-dashed">
-                                    <span class="text-[9px] text-slate-400 font-medium">없음</span>
-                                 </div>`;
+                        html += `<div class="flex-1 flex items-center justify-center min-h-[30px] bg-slate-50 rounded border border-slate-200 border-dashed"><span class="text-[9px] text-slate-400 font-medium">없음</span></div>`;
                     } else {
                         playerChars.forEach(char => {
                             const isSupp = supporters.includes(char.name);
@@ -989,12 +959,10 @@
         });
     }
 
-    // --- [ 캐릭터 설정 및 관리 ] ---
     function renderConfigFilters() {
         const container = document.getElementById('config-player-filters');
         if (!container) return;
         container.innerHTML = '<span class="text-xs font-bold text-slate-500 mr-1">👤 필터:</span>';
-        
         const allPlayers = [...new Set(window.charactersData.map(c => c.player))];
         const isAll = window.configSelectedPlayers.size === 0;
         
@@ -1062,16 +1030,14 @@
         if (window.editingDbId) {
             const existingChar = window.charactersData.find(c => c.dbId === window.editingDbId);
             existingChar.player = player; existingChar.name = name; existingChar.level = level; existingChar.contents = autoContents;
-            cancelEdit(); 
-            showToast('캐릭터 정보가 수정되었습니다.');
+            cancelEdit(); showToast('캐릭터 정보가 수정되었습니다.');
         } else {
             const newId = 'char_' + Date.now().toString();
             window.charactersData.push({ dbId: newId, player, name, level, contents: autoContents, completed: [], timestamp: Date.now() });
             document.getElementById('add-char-form').reset();
             showToast('새 캐릭터가 등록되었습니다.');
         }
-        window.saveToCloud(); 
-        renderAll();
+        window.saveToCloud(); renderAll();
     };
 
     window.startEdit = function(dbId) {
@@ -1099,40 +1065,27 @@
         if (btnElement.innerText === "정말?") {
             window.charactersData = window.charactersData.filter(c => c.dbId !== dbId);
             if(Array.isArray(window.partyData)) {
-                window.partyData.forEach(p => {
-                    p.slots = p.slots.map(sId => sId === dbId ? null : sId);
-                });
+                window.partyData.forEach(p => { p.slots = p.slots.map(sId => sId === dbId ? null : sId); });
             }
             window.saveToCloud(); renderAll(); showToast('캐릭터가 삭제되었습니다.', 'warning');
         } else {
-            btnElement.innerText = "정말?";
-            btnElement.className = "text-white bg-red-600 px-2 py-1 rounded text-[10px] font-bold transition";
+            btnElement.innerText = "정말?"; btnElement.className = "text-white bg-red-600 px-2 py-1 rounded text-[10px] font-bold transition";
             setTimeout(() => {
-                if (btnElement && btnElement.innerText === "정말?") {
-                    btnElement.innerText = "삭제";
-                    btnElement.className = "text-red-500 bg-red-50 hover:bg-red-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition";
-                }
+                if (btnElement && btnElement.innerText === "정말?") { btnElement.innerText = "삭제"; btnElement.className = "text-red-500 bg-red-50 hover:bg-red-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition"; }
             }, 3000);
         }
     };
 
     window.requestReset = function(btnElement) {
         if (btnElement.innerText === "확인") {
-            window.charactersData = [];
-            window.cpmData = { inputs: {}, records: [] };
-            window.partyData = [];
+            window.charactersData = []; window.cpmData = { inputs: {}, records: [] }; window.partyData = [];
             window.saveToCloud(); renderAll();
-            btnElement.innerText = "데이터 완전 초기화";
-            btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
+            btnElement.innerText = "데이터 완전 초기화"; btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
             showToast('모든 데이터가 초기화되었습니다.');
         } else {
-            btnElement.innerText = "확인";
-            btnElement.className = "text-[11px] bg-red-600 text-white px-3 py-1.5 rounded transition font-bold shadow-sm";
+            btnElement.innerText = "확인"; btnElement.className = "text-[11px] bg-red-600 text-white px-3 py-1.5 rounded transition font-bold shadow-sm";
             setTimeout(() => {
-                if (btnElement.innerText === "확인") {
-                    btnElement.innerText = "데이터 완전 초기화";
-                    btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
-                }
+                if (btnElement.innerText === "확인") { btnElement.innerText = "데이터 완전 초기화"; btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm"; }
             }, 3500);
         }
     };
@@ -1165,15 +1118,11 @@
 
         if ((min === 0 && sec === 0) || casts === 0) { showToast('전투 시간과 시전 횟수를 정확히 입력해주세요.', 'warning'); return; }
 
-        const totalOriginalSec = (min * 60) + sec;
-        const totalSec = totalOriginalSec - exclude;
-
+        const totalOriginalSec = (min * 60) + sec; const totalSec = totalOriginalSec - exclude;
         if (totalSec <= 0) { showToast('제외 시간이 전투 시간보다 길거나 같습니다.', 'warning'); return; }
 
-        const cpm = (casts * 60) / totalSec;
-        const interval = totalSec / casts;
-        const castsPer30s = cpm / 2;
-        const impact = 60 / totalSec;
+        const cpm = (casts * 60) / totalSec; const interval = totalSec / casts;
+        const castsPer30s = cpm / 2; const impact = 60 / totalSec;
 
         document.getElementById('res-current-cpm').innerText = cpm.toFixed(2);
         document.getElementById('res-interval').innerText = interval.toFixed(2);
@@ -1182,8 +1131,7 @@
         if (exclude > 0) timeStr += ` (총 ${totalOriginalSec}초 - 보정 ${exclude}초 = ${totalSec}초)`;
         else timeStr += ` (${totalSec}초)`;
         
-        document.getElementById('res-time-str').innerText = timeStr;
-        document.getElementById('res-casts').innerText = `${casts}회`;
+        document.getElementById('res-time-str').innerText = timeStr; document.getElementById('res-casts').innerText = `${casts}회`;
         document.getElementById('res-formula').innerText = `${casts} × 60 ÷ ${totalSec} = ${cpm.toFixed(2)}`;
         document.getElementById('res-30s').innerText = `약 ${castsPer30s.toFixed(2)}회`;
         document.getElementById('res-interval-text').innerText = `약 ${interval.toFixed(2)}초마다 1회`;
@@ -1197,9 +1145,7 @@
         const rowTargetRate = document.getElementById('row-target-rate');
 
         if (target > 0) {
-            const requiredCasts = Math.ceil((target * totalSec) / 60);
-            const realAchievementRate = (cpm / target) * 100;
-            
+            const requiredCasts = Math.ceil((target * totalSec) / 60); const realAchievementRate = (cpm / target) * 100;
             let barColorClass = ""; let textColorClass = "";
             if (realAchievementRate <= 30) { barColorClass = "bg-red-500 shadow-sm"; textColorClass = "text-red-500"; }
             else if (realAchievementRate <= 70) { barColorClass = "bg-blue-500 shadow-sm"; textColorClass = "text-blue-500"; }
@@ -1214,17 +1160,11 @@
             document.getElementById('res-target-percent-text').className = `text-[13px] font-bold ${textColorClass}`;
             
             const msgEl = document.getElementById('res-target-msg');
-            if(casts >= requiredCasts) {
-                msgEl.innerHTML = `<span class="text-slate-700">설정한 목표 CPM을 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>`;
-                badgeSuccess.classList.remove('hidden');
-            } else {
-                msgEl.innerText = `목표 달성까지 ${requiredCasts - casts}회 부족합니다.`;
-                badgeSuccess.classList.add('hidden');
-            }
+            if(casts >= requiredCasts) { msgEl.innerHTML = `<span class="text-slate-700">설정한 목표 CPM을 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>`; badgeSuccess.classList.remove('hidden'); }
+            else { msgEl.innerText = `목표 달성까지 ${requiredCasts - casts}회 부족합니다.`; badgeSuccess.classList.add('hidden'); }
             targetSection.classList.remove('hidden');
 
-            document.getElementById('res-target-val').innerText = target;
-            document.getElementById('res-target-min-casts').innerText = `${requiredCasts}회`;
+            document.getElementById('res-target-val').innerText = target; document.getElementById('res-target-min-casts').innerText = `${requiredCasts}회`;
             
             const extraEl = document.getElementById('res-target-extra');
             if(casts >= requiredCasts) { extraEl.innerText = "추가 시전 없이 목표 달성"; extraEl.className = "text-slate-700"; }
@@ -1241,136 +1181,84 @@
             rowTargetExtra.classList.add('hidden'); rowTargetRate.classList.add('hidden');
         }
 
-        const rowScarecrow = document.getElementById('row-scarecrow');
-        const rowEfficiency = document.getElementById('row-efficiency');
+        const rowScarecrow = document.getElementById('row-scarecrow'); const rowEfficiency = document.getElementById('row-efficiency');
         if (scarecrow > 0) {
             const efficiency = (cpm / scarecrow) * 100;
-            document.getElementById('res-scarecrow-cpm').innerText = scarecrow.toFixed(2);
-            document.getElementById('res-efficiency').innerText = `${efficiency.toFixed(1)}%`;
+            document.getElementById('res-scarecrow-cpm').innerText = scarecrow.toFixed(2); document.getElementById('res-efficiency').innerText = `${efficiency.toFixed(1)}%`;
             rowScarecrow.classList.remove('hidden'); rowEfficiency.classList.remove('hidden');
-        } else {
-            rowScarecrow.classList.add('hidden'); rowEfficiency.classList.add('hidden');
-        }
+        } else { rowScarecrow.classList.add('hidden'); rowEfficiency.classList.add('hidden'); }
 
-        const tbody = document.getElementById('res-variance-body');
-        tbody.innerHTML = '';
+        const tbody = document.getElementById('res-variance-body'); tbody.innerHTML = '';
         for (let i = -2; i <= 2; i++) {
-            const vCasts = casts + i;
-            if (vCasts <= 0) continue;
+            const vCasts = casts + i; if (vCasts <= 0) continue;
             const vCpm = (vCasts * 60) / totalSec;
-            let label = i > 0 ? `+${i}회` : `${i}회`;
-            let trClass = "border-b border-slate-200 last:border-0";
-            let valClass = "";
+            let label = i > 0 ? `+${i}회` : `${i}회`; let trClass = "border-b border-slate-200 last:border-0"; let valClass = "";
             if (i === 0) { label = "현재"; trClass = "bg-blue-50 font-bold border-b border-slate-200"; valClass = "text-blue-600"; }
-            else if (i < 0) { valClass = "text-red-500"; }
-            else { valClass = "text-green-600"; }
-
+            else if (i < 0) { valClass = "text-red-500"; } else { valClass = "text-green-600"; }
             tbody.innerHTML += `<tr class="${trClass}"><td class="py-2 ${valClass}">${label}</td><td class="py-2">${vCasts}회</td><td class="py-2">${i===0 ? '-' : vCpm.toFixed(2)}</td></tr>`;
         }
         document.getElementById('cpm-result-area').classList.remove('hidden');
     };
 
     window.resetCpmForm = function() {
-        document.getElementById('cpm-record-name').value = ''; document.getElementById('cpm-skill-name').value = '';
-        document.getElementById('cpm-min').value = ''; document.getElementById('cpm-sec').value = '';
-        document.getElementById('cpm-casts').value = ''; document.getElementById('cpm-target').value = '';
-        document.getElementById('cpm-scarecrow').value = ''; document.getElementById('cpm-exclude').value = '0';
-        document.getElementById('cpm-result-area').classList.add('hidden');
-        window.editingCpmId = null;
-        const btnSave = document.getElementById('btn-cpm-save');
-        if (btnSave) { btnSave.innerHTML = '💾 현재 결과 클라우드에 저장'; btnSave.className = 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm'; }
-        const btnCancel = document.getElementById('btn-cpm-cancel');
-        if (btnCancel) btnCancel.classList.add('hidden');
+        document.getElementById('cpm-record-name').value = ''; document.getElementById('cpm-skill-name').value = ''; document.getElementById('cpm-min').value = ''; document.getElementById('cpm-sec').value = '';
+        document.getElementById('cpm-casts').value = ''; document.getElementById('cpm-target').value = ''; document.getElementById('cpm-scarecrow').value = ''; document.getElementById('cpm-exclude').value = '0';
+        document.getElementById('cpm-result-area').classList.add('hidden'); window.editingCpmId = null;
+        const btnSave = document.getElementById('btn-cpm-save'); if (btnSave) { btnSave.innerHTML = '💾 현재 결과 클라우드에 저장'; btnSave.className = 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm'; }
+        const btnCancel = document.getElementById('btn-cpm-cancel'); if (btnCancel) btnCancel.classList.add('hidden');
     };
 
     window.saveCpmRecord = function() {
-        const min = parseInt(document.getElementById('cpm-min').value) || 0;
-        const sec = parseInt(document.getElementById('cpm-sec').value) || 0;
-        const casts = parseInt(document.getElementById('cpm-casts').value) || 0;
-        const target = document.getElementById('cpm-target').value;
-        const scarecrow = document.getElementById('cpm-scarecrow').value;
-        const exclude = parseInt(document.getElementById('cpm-exclude').value) || 0;
-        let rName = document.getElementById('cpm-record-name').value.trim();
-        let sName = document.getElementById('cpm-skill-name').value.trim();
+        const min = parseInt(document.getElementById('cpm-min').value) || 0; const sec = parseInt(document.getElementById('cpm-sec').value) || 0; const casts = parseInt(document.getElementById('cpm-casts').value) || 0;
+        const target = document.getElementById('cpm-target').value; const scarecrow = document.getElementById('cpm-scarecrow').value; const exclude = parseInt(document.getElementById('cpm-exclude').value) || 0;
+        let rName = document.getElementById('cpm-record-name').value.trim(); let sName = document.getElementById('cpm-skill-name').value.trim();
         
         if ((min === 0 && sec === 0) || casts === 0) { showToast('전투 시간과 시전 횟수를 정확히 입력한 후 저장해주세요.', 'warning'); return; }
-
-        const totalSec = (min * 60) + sec - exclude;
-        if (totalSec <= 0) return;
-
+        const totalSec = (min * 60) + sec - exclude; if (totalSec <= 0) return;
         const cpm = (casts * 60) / totalSec;
         if (!rName) { const d = new Date(); rName = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 기록`; }
 
         if (window.editingCpmId) {
             const idx = window.cpmData.records.findIndex(r => r.id === window.editingCpmId);
-            if (idx > -1) {
-                window.cpmData.records[idx] = { ...window.cpmData.records[idx], recordName: rName, skillName: sName, min, sec, casts, target, scarecrow, exclude, cpm: cpm.toFixed(2) };
-                showToast(`'${rName}' 기록이 수정되었습니다.`);
-            }
+            if (idx > -1) { window.cpmData.records[idx] = { ...window.cpmData.records[idx], recordName: rName, skillName: sName, min, sec, casts, target, scarecrow, exclude, cpm: cpm.toFixed(2) }; showToast(`'${rName}' 기록이 수정되었습니다.`); }
             resetCpmForm();
         } else {
             const newRecord = { id: 'cpm_rec_' + Date.now(), recordName: rName, skillName: sName, min, sec, casts, target, scarecrow, exclude, cpm: cpm.toFixed(2), timestamp: Date.now() };
-            window.cpmData.records.unshift(newRecord);
-            showToast(`'${rName}'(으)로 기록이 저장되었습니다.`);
+            window.cpmData.records.unshift(newRecord); showToast(`'${rName}'(으)로 기록이 저장되었습니다.`);
         }
         window.saveToCloud(); renderCpmRecords();
     };
 
     function renderCpmRecords() {
-        const container = document.getElementById('cpm-records-container');
-        const countEl = document.getElementById('cpm-record-count');
-        if(!container) return;
-        countEl.innerText = `${window.cpmData.records.length}개`;
-        if (window.cpmData.records.length === 0) {
-            container.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-slate-400"><span class="text-3xl mb-2 opacity-60">📁</span><span class="text-xs">저장된 기록이 없습니다.</span></div>`;
-            return;
-        }
+        const container = document.getElementById('cpm-records-container'); const countEl = document.getElementById('cpm-record-count');
+        if(!container) return; countEl.innerText = `${window.cpmData.records.length}개`;
+        if (window.cpmData.records.length === 0) { container.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-slate-400"><span class="text-3xl mb-2 opacity-60">📁</span><span class="text-xs">저장된 기록이 없습니다.</span></div>`; return; }
 
         container.innerHTML = window.cpmData.records.map(r => `
             <div class="bg-white border border-slate-200 hover:border-blue-400 transition-colors p-3 rounded-lg cursor-pointer group relative shadow-sm" onclick="loadCpmRecord('${r.id}')">
-                <div class="flex justify-between items-start mb-2 pr-6">
-                    <div class="flex flex-col">
-                        <span class="text-xs font-bold text-slate-800 truncate max-w-[150px]" title="${r.recordName}">${r.recordName}</span>
-                        ${r.skillName ? `<span class="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">${r.skillName}</span>` : ''}
-                    </div>
-                    <div class="text-right">
-                        <span class="text-sm font-black text-yellow-500 block leading-none">${r.cpm}</span>
-                        <span class="text-[8px] text-slate-400">CPM</span>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between text-[10px] text-slate-500 bg-slate-50 rounded px-2 py-1.5 border border-slate-100">
-                    <span>⏱️ ${r.min}분 ${r.sec}초</span><span class="text-slate-300">|</span><span class="text-slate-600 font-bold">⚔️ ${r.casts}회</span>
-                </div>
+                <div class="flex justify-between items-start mb-2 pr-6"><div class="flex flex-col"><span class="text-xs font-bold text-slate-800 truncate max-w-[150px]" title="${r.recordName}">${r.recordName}</span>${r.skillName ? `<span class="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">${r.skillName}</span>` : ''}</div><div class="text-right"><span class="text-sm font-black text-yellow-500 block leading-none">${r.cpm}</span><span class="text-[8px] text-slate-400">CPM</span></div></div>
+                <div class="flex items-center justify-between text-[10px] text-slate-500 bg-slate-50 rounded px-2 py-1.5 border border-slate-100"><span>⏱️ ${r.min}분 ${r.sec}초</span><span class="text-slate-300">|</span><span class="text-slate-600 font-bold">⚔️ ${r.casts}회</span></div>
                 <button onclick="deleteCpmRecord(event, '${r.id}', this)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs">❌</button>
             </div>
         `).join('');
     }
 
     window.loadCpmRecord = function(id) {
-        const record = window.cpmData.records.find(r => r.id === id);
-        if(!record) return;
-        document.getElementById('cpm-record-name').value = record.recordName || ''; document.getElementById('cpm-skill-name').value = record.skillName || '';
-        document.getElementById('cpm-min').value = record.min || ''; document.getElementById('cpm-sec').value = record.sec || '';
-        document.getElementById('cpm-casts').value = record.casts || ''; document.getElementById('cpm-target').value = record.target || '';
-        document.getElementById('cpm-scarecrow').value = record.scarecrow || ''; document.getElementById('cpm-exclude').value = record.exclude || '0';
-        window.editingCpmId = id;
-        const btnSave = document.getElementById('btn-cpm-save');
+        const record = window.cpmData.records.find(r => r.id === id); if(!record) return;
+        document.getElementById('cpm-record-name').value = record.recordName || ''; document.getElementById('cpm-skill-name').value = record.skillName || ''; document.getElementById('cpm-min').value = record.min || ''; document.getElementById('cpm-sec').value = record.sec || '';
+        document.getElementById('cpm-casts').value = record.casts || ''; document.getElementById('cpm-target').value = record.target || ''; document.getElementById('cpm-scarecrow').value = record.scarecrow || ''; document.getElementById('cpm-exclude').value = record.exclude || '0';
+        window.editingCpmId = id; const btnSave = document.getElementById('btn-cpm-save');
         if (btnSave) { btnSave.innerHTML = '💾 수정된 기록 덮어쓰기'; btnSave.className = 'bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm'; }
-        const btnCancel = document.getElementById('btn-cpm-cancel');
-        if (btnCancel) btnCancel.classList.remove('hidden');
-        runCpmCalculation(); 
-        const toolTab = document.getElementById('tool-view-cpm');
-        if (toolTab) window.scrollTo({ top: toolTab.offsetTop - 20, behavior: 'smooth' });
+        const btnCancel = document.getElementById('btn-cpm-cancel'); if (btnCancel) btnCancel.classList.remove('hidden');
+        runCpmCalculation(); const toolTab = document.getElementById('tool-view-cpm'); if (toolTab) window.scrollTo({ top: toolTab.offsetTop - 20, behavior: 'smooth' });
     };
 
     window.deleteCpmRecord = function(e, id, btnElement) {
         e.stopPropagation();
         if (btnElement.innerText === "삭제?") {
-            window.cpmData.records = window.cpmData.records.filter(r => r.id !== id);
-            window.saveToCloud(); renderCpmRecords(); showToast('기록이 삭제되었습니다.', 'warning');
+            window.cpmData.records = window.cpmData.records.filter(r => r.id !== id); window.saveToCloud(); renderCpmRecords(); showToast('기록이 삭제되었습니다.', 'warning');
         } else {
-            const orgHtml = btnElement.innerHTML; btnElement.innerText = "삭제?";
-            btnElement.className = "absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-sm opacity-100 transition";
+            const orgHtml = btnElement.innerHTML; btnElement.innerText = "삭제?"; btnElement.className = "absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-sm opacity-100 transition";
             setTimeout(() => { if (btnElement && btnElement.innerText === "삭제?") { btnElement.innerHTML = orgHtml; btnElement.className = "absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"; } }, 3000);
         }
     };
@@ -1420,30 +1308,12 @@
 
         const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
         let pricesHTML = `
-            <div>
-                <label class="text-slate-500 text-[10px] font-bold block mb-1">🪵 튼튼한목재 (100개)</label>
-                <input type="text" value="${p.t === 0 || p.t === undefined ? '' : formatNum(p.t)}" oninput="handlePriceInput(this, 't')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-orange-500 outline-none transition">
-            </div>
-            <div>
-                <label class="text-slate-500 text-[10px] font-bold block mb-1">⚪ 흰색 재료 (100개)</label>
-                <input type="text" value="${p.w === 0 || p.w === undefined ? '' : formatNum(p.w)}" oninput="handlePriceInput(this, 'w')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-slate-500 outline-none transition">
-            </div>
-            <div>
-                <label class="text-slate-500 text-[10px] font-bold block mb-1">🟢 초록 재료 (100개)</label>
-                <input type="text" value="${p.g === 0 || p.g === undefined ? '' : formatNum(p.g)}" oninput="handlePriceInput(this, 'g')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-green-500 outline-none transition">
-            </div>
-            <div>
-                <label class="text-slate-500 text-[10px] font-bold block mb-1">🔵 파란 재료 (100개)</label>
-                <input type="text" value="${p.b === 0 || p.b === undefined ? '' : formatNum(p.b)}" oninput="handlePriceInput(this, 'b')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-blue-500 outline-none transition">
-            </div>
-            <div>
-                <label class="text-slate-500 text-[10px] font-bold block mb-1">📦 하급 어비도스 (1개)</label>
-                <input type="text" value="${p.low === 0 || p.low === undefined ? '' : formatNum(p.low)}" oninput="handlePriceInput(this, 'low')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition">
-            </div>
-            <div>
-                <label class="text-slate-500 text-[10px] font-bold block mb-1">📦 상급 어비도스 (1개)</label>
-                <input type="text" value="${p.high === 0 || p.high === undefined ? '' : formatNum(p.high)}" oninput="handlePriceInput(this, 'high')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition">
-            </div>
+            <div><label class="text-slate-500 text-[10px] font-bold block mb-1">🪵 튼튼한목재 (100개)</label><input type="text" value="${p.t === 0 || p.t === undefined ? '' : formatNum(p.t)}" oninput="handlePriceInput(this, 't')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-orange-500 outline-none transition"></div>
+            <div><label class="text-slate-500 text-[10px] font-bold block mb-1">⚪ 흰색 재료 (100개)</label><input type="text" value="${p.w === 0 || p.w === undefined ? '' : formatNum(p.w)}" oninput="handlePriceInput(this, 'w')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-slate-500 outline-none transition"></div>
+            <div><label class="text-slate-500 text-[10px] font-bold block mb-1">🟢 초록 재료 (100개)</label><input type="text" value="${p.g === 0 || p.g === undefined ? '' : formatNum(p.g)}" oninput="handlePriceInput(this, 'g')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-green-500 outline-none transition"></div>
+            <div><label class="text-slate-500 text-[10px] font-bold block mb-1">🔵 파란 재료 (100개)</label><input type="text" value="${p.b === 0 || p.b === undefined ? '' : formatNum(p.b)}" oninput="handlePriceInput(this, 'b')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-blue-500 outline-none transition"></div>
+            <div><label class="text-slate-500 text-[10px] font-bold block mb-1">📦 하급 어비도스 (1개)</label><input type="text" value="${p.low === 0 || p.low === undefined ? '' : formatNum(p.low)}" oninput="handlePriceInput(this, 'low')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div>
+            <div><label class="text-slate-500 text-[10px] font-bold block mb-1">📦 상급 어비도스 (1개)</label><input type="text" value="${p.high === 0 || p.high === undefined ? '' : formatNum(p.high)}" oninput="handlePriceInput(this, 'high')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div>
         `;
         document.getElementById('oreha-prices-container').innerHTML = pricesHTML;
         renderOrehaResult();
@@ -1456,8 +1326,7 @@
             if (effectiveW < N * req.w) return false;
             if (inv.g < N * req.g) return false;
             const reqB = Math.max(0, N * req.b - inv.b); const ep = Math.ceil(reqB / 10);
-            const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p);
-            const addE = Math.ceil(addP / 80);
+            const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p); const addE = Math.ceil(addP / 80);
             const excessW = effectiveW - N * req.w; const excessG = inv.g - N * req.g;
             return (Math.floor(excessW / 100) + Math.floor(excessG / 50)) >= addE;
         };
@@ -1466,10 +1335,8 @@
         while (low <= high) { let mid = Math.floor((low + high) / 2); if (isPossible(mid)) { best = mid; low = mid + 1; } else high = mid - 1; }
         if (best === 0) return null;
 
-        const N = best;
-        const reqB = Math.max(0, N * req.b - inv.b); const ep = Math.ceil(reqB / 10);
-        const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p);
-        const addE = Math.ceil(addP / 80);
+        const N = best; const reqB = Math.max(0, N * req.b - inv.b); const ep = Math.ceil(reqB / 10);
+        const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p); const addE = Math.ceil(addP / 80);
         let remW = effectiveW - N * req.w; let remG = inv.g - N * req.g; let ew = 0, eg = 0;
 
         for (let i = 0; i < addE; i++) {
@@ -1479,10 +1346,8 @@
         
         return {
             crafts: N, gold: N * req.gold, et, ew, eg, ep,
-            usedT: et * 5, usedW: N * req.w + ew * 100, usedG: N * req.g + eg * 50,
-            usedB: N * req.b, usedP: ep * 100,
-            finalT: (inv.t || 0) - (et * 5), finalW: remW, finalG: remG,
-            finalB: inv.b + ep * 10 - N * req.b, finalP: inv.p + (ew + eg) * 80 - ep * 100
+            usedT: et * 5, usedW: N * req.w + ew * 100, usedG: N * req.g + eg * 50, usedB: N * req.b, usedP: ep * 100,
+            finalT: (inv.t || 0) - (et * 5), finalW: remW, finalG: remG, finalB: inv.b + ep * 10 - N * req.b, finalP: inv.p + (ew + eg) * 80 - ep * 100
         };
     }
 
@@ -1495,8 +1360,7 @@
     function renderOrehaResult() {
         const resContainer = document.getElementById('oreha-result-container');
         if (!resContainer) return;
-        const res = calculateOreha();
-        const inv = window.oState.inv; const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
+        const res = calculateOreha(); const inv = window.oState.inv; const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
 
         const rawRevenue = (inv.t / 100) * (p.t || 0) + (inv.w / 100) * (p.w || 0) + (inv.g / 100) * (p.g || 0) + (inv.b / 100) * (p.b || 0);
         const sellRawProfit = rawRevenue * 0.95;
@@ -1504,8 +1368,7 @@
         let craftProfit = sellRawProfit; let expectedOrehas = 0;
         if (res && res.crafts > 0) {
             const targetPrice = window.oState.craftType === 'normal' ? (p.low || 0) : (p.high || 0);
-            expectedOrehas = res.crafts * 10.535; 
-            const orehaRevenue = expectedOrehas * targetPrice;
+            expectedOrehas = res.crafts * 10.535; const orehaRevenue = expectedOrehas * targetPrice;
             const leftoverRevenue = (res.finalT / 100) * (p.t || 0) + (res.finalW / 100) * (p.w || 0) + (res.finalG / 100) * (p.g || 0) + (res.finalB / 100) * (p.b || 0);
             craftProfit = (orehaRevenue * 0.95) - res.gold + (leftoverRevenue * 0.95);
         }
