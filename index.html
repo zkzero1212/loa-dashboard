@@ -7,82 +7,52 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            background-color: #f8fafc; /* 라이트 테마 배경 (연한 회색) */
-            color: #1e293b; /* 짙은 텍스트 */
+            background-color: #f8fafc;
+            color: #1e293b;
             font-family: 'Pretendard', sans-serif;
+            overflow-y: scroll;
         }
         .glass-panel {
             background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
             border: 1px solid rgba(226, 232, 240, 1);
             border-radius: 1rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        .tab-btn {
-            transition: all 0.3s;
-            color: #475569;
-            background-color: #ffffff;
-        }
+        .tab-btn { transition: all 0.3s; color: #475569; background-color: #ffffff; }
         .tab-btn:hover { background-color: #f1f5f9; }
-        .tab-btn.active {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            border-color: transparent;
-        }
+        .tab-btn.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border-color: transparent; }
         
-        .checkbox-custom:checked + div {
-            background-color: #3b82f6;
-            border-color: #3b82f6;
-            color: white;
-        }
+        .checkbox-custom:checked + div { background-color: #3b82f6; border-color: #3b82f6; color: white; }
 
         .dungeon-badge {
-            transition: all 0.2s ease;
-            cursor: pointer;
-            user-select: none;
-            border-width: 1px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            margin: 2px;
+            transition: all 0.2s ease; cursor: pointer; user-select: none;
+            border-width: 1px; display: inline-flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin: 2px;
         }
-        .dungeon-badge:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.15);
-        }
+        .dungeon-badge:hover { transform: translateY(-1px); box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1); }
         .dungeon-badge:active { transform: translateY(0); }
         .dungeon-badge.completed {
-            text-decoration: line-through;
-            opacity: 0.5;
-            filter: grayscale(100%);
-            background: #f1f5f9 !important;
-            border-color: #e2e8f0 !important;
-            color: #94a3b8 !important;
-            box-shadow: none;
+            text-decoration: line-through; opacity: 0.5; filter: grayscale(100%);
+            background: #f1f5f9 !important; border-color: #e2e8f0 !important;
+            color: #94a3b8 !important; box-shadow: none;
         }
 
-        /* 서포터 강조 (라이트 테마용 은은한 스타일) */
         .supporter-glow {
-            border-left-color: #fbbf24 !important;
-            border-left-width: 4px !important;
+            border-left-color: #fbbf24 !important; border-left-width: 4px !important;
             background: linear-gradient(90deg, rgba(253,230,138,0.2) 0%, rgba(255,255,255,1) 100%) !important;
         }
 
-        /* 드래그 앤 드롭 슬롯 */
         .slot-droppable { border: 2px dashed #cbd5e1; transition: all 0.2s; }
         .slot-droppable.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
-        .party-completed { opacity: 0.5; filter: grayscale(80%); transition: all 0.3s; }
+        .party-completed { opacity: 0.55; filter: grayscale(80%); transition: all 0.3s; }
 
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        /* Custom Scrollbar for Kanban Board */
+        ::-webkit-scrollbar { width: 8px; height: 10px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .cpm-table th, .cpm-table td {
-            border: 1px solid #e2e8f0;
-            padding: 8px 12px;
-        }
+        .cpm-table th, .cpm-table td { border: 1px solid #e2e8f0; padding: 8px 12px; }
 
         @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
@@ -109,7 +79,7 @@
 
     window.charactersData = [];
     window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
-    window.partyData = {};
+    window.partyData = []; // 배열 형태로 변경됨
     window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
     
     window.lastWeeklyResetId = null;
@@ -118,9 +88,9 @@
     let editingDbId = null;
     let editingCpmId = null;
 
-    // 대시보드 모드: 'party' (파티 짜기 기본값) | 'personal' (개인 숙제)
+    // 대시보드 모드: 'party' (기본값) | 'personal'
     window.dashboardMode = 'party';
-    window.summaryStates = {}; // 접힘 상태 저장 (기본적으로 모두 접힘)
+    window.summaryStates = {}; // 접힘 상태 저장 (기본 undefined = 모두 접힘)
 
     async function initCloudDB() {
         const ind = document.getElementById('cloud-indicator');
@@ -144,7 +114,11 @@
                 const data = result.data;
                 if (data.characters) window.charactersData = JSON.parse(data.characters);
                 if (data.cpm) window.cpmData = JSON.parse(data.cpm);
-                if (data.party) window.partyData = JSON.parse(data.party);
+                if (data.party) {
+                    let parsedParty = JSON.parse(data.party);
+                    // 기존 오브젝트 형태였다면 빈 배열로 초기화 (마이그레이션)
+                    window.partyData = Array.isArray(parsedParty) ? parsedParty : [];
+                }
                 if (data.oreha) {
                     let parsed = JSON.parse(data.oreha);
                     if (parsed.inv && parsed.inv.tradable) {
@@ -155,10 +129,6 @@
                     }
                 }
                 if (data.lastWeeklyResetId) window.lastWeeklyResetId = data.lastWeeklyResetId;
-
-                partyDungeons.forEach(d => {
-                    if (!window.partyData[d.id]) window.partyData[d.id] = { slots: [null, null, null, null], isCleared: false };
-                });
 
                 if (!window.hasCheckedWeeklyReset && window.charactersData.length > 0) {
                     window.hasCheckedWeeklyReset = true;
@@ -181,7 +151,6 @@
                 st.className = 'text-[11px] text-red-500 font-bold tracking-wide flex items-center';
             }
         }
-        
         if(typeof window.renderAll === 'function') window.renderAll();
     }
 
@@ -195,7 +164,7 @@
                 data: {
                     characters: JSON.stringify(window.charactersData),
                     cpm: JSON.stringify(window.cpmData),
-                    party: JSON.stringify(window.partyData),
+                    party: JSON.stringify(window.partyData), // 배열 통째로 저장됨
                     oreha: JSON.stringify(window.oState),
                     lastWeeklyResetId: window.lastWeeklyResetId || ''
                 }
@@ -215,7 +184,7 @@
 
     <div class="text-center space-y-1.5 relative">
         <h1 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">💻 로스트아크 클라우드 대시보드</h1>
-        <p class="text-xs md:text-sm text-slate-500">화이트 테마 기반 통합 대시보드 / 수요일 자동 리셋</p>
+        <p class="text-xs md:text-sm text-slate-500">칸반 보드 기반 파티 플래너 / 수요일 자동 리셋</p>
     </div>
 
     <div class="flex flex-wrap justify-center gap-2 mb-4">
@@ -230,11 +199,9 @@
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
             <div>
                 <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">📋 이번 주 숙제 플래너</h2>
-                <!-- 초기값이 파티 모드이므로 설명 문구도 그에 맞게 표시 -->
-                <p id="dashboard-desc" class="text-[11px] text-slate-500 mt-0.5">캐릭터 명단에서 빈칸으로 <b>드래그 앤 드롭</b>하거나, <b>빈칸을 클릭</b>하여 배정하세요.</p>
+                <p id="dashboard-desc" class="text-[11px] text-slate-500 mt-0.5">원하는 던전 열 아래의 <b>+ 파티 추가</b>를 눌러 파티를 짜보세요.</p>
             </div>
             <div class="flex gap-2 mt-2 sm:mt-0">
-                <!-- 초기값이 파티 모드이므로 버튼은 '개인 숙제 보기'로 세팅 -->
                 <button id="btn-toggle-view" onclick="toggleDashboardMode()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1">
                     <span>👤</span> 개인 숙제 보기
                 </button>
@@ -244,7 +211,7 @@
             </div>
         </div>
         <div id="dashboard-container">
-            <!-- JS 렌더링 (모드에 따라 personal / party 뷰 생성) -->
+            <!-- JS 렌더링 -->
         </div>
     </div>
 
@@ -252,9 +219,7 @@
     <div id="view-filter" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm">
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
-            <div id="filter-checkboxes" class="flex flex-wrap gap-2">
-                <!-- JS 렌더링 -->
-            </div>
+            <div id="filter-checkboxes" class="flex flex-wrap gap-2"></div>
         </div>
         <div id="filter-results" class="space-y-4">
             <div class="text-center text-slate-400 py-10 glass-panel text-sm font-medium">던전을 체크하시면 난이도별로 그룹화되어 나타납니다.</div>
@@ -263,280 +228,84 @@
 
     <!-- 3. 캐릭터 설정 -->
     <div id="view-config" class="hidden space-y-4">
+        <!-- 등록폼 -->
         <div class="glass-panel p-4 shadow-sm border-l-4 border-l-green-500" id="form-panel">
-            <h2 id="form-title" class="text-base font-bold mb-3 text-slate-800 flex items-center gap-2">
-                <span>➕</span> 캐릭터 등록 / 수정 (자동 계산)
-            </h2>
+            <h2 id="form-title" class="text-base font-bold mb-3 text-slate-800 flex items-center gap-2"><span>➕</span> 캐릭터 등록 / 수정 (자동 계산)</h2>
             <form id="add-char-form" onsubmit="addCharacter(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="col-span-1">
-                    <label class="block text-[11px] font-bold text-slate-500 mb-1">플레이어명</label>
-                    <input type="text" id="add-player" required class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 건희">
-                </div>
-                <div class="col-span-1">
-                    <label class="block text-[11px] font-bold text-slate-500 mb-1">직업(캐릭터)</label>
-                    <input type="text" id="add-name" required maxlength="12" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 바드">
-                </div>
-                <div class="col-span-1">
-                    <label class="block text-[11px] font-bold text-slate-500 mb-1">아이템 레벨</label>
-                    <div class="flex items-end gap-1.5 w-full">
-                        <input type="number" id="add-level" step="1" required class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 1750">
-                        <button type="submit" id="submit-btn" class="w-20 shrink-0 bg-green-600 hover:bg-green-500 text-white font-bold py-1.5 rounded text-sm transition shadow-sm">등록</button>
-                        <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden w-20 shrink-0 bg-slate-500 hover:bg-slate-400 text-white font-bold py-1.5 rounded text-sm transition shadow-sm">취소</button>
-                    </div>
-                </div>
+                <div class="col-span-1"><label class="block text-[11px] font-bold text-slate-500 mb-1">플레이어명</label><input type="text" id="add-player" required class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 건희"></div>
+                <div class="col-span-1"><label class="block text-[11px] font-bold text-slate-500 mb-1">직업(캐릭터)</label><input type="text" id="add-name" required maxlength="12" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 바드"></div>
+                <div class="col-span-1"><label class="block text-[11px] font-bold text-slate-500 mb-1">아이템 레벨</label><div class="flex items-end gap-1.5 w-full"><input type="number" id="add-level" step="1" required class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1.5 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 1750"><button type="submit" id="submit-btn" class="w-20 shrink-0 bg-green-600 hover:bg-green-500 text-white font-bold py-1.5 rounded text-sm transition shadow-sm">등록</button><button type="button" id="cancel-edit-btn" onclick="cancelEdit()" class="hidden w-20 shrink-0 bg-slate-500 hover:bg-slate-400 text-white font-bold py-1.5 rounded text-sm transition shadow-sm">취소</button></div></div>
             </form>
         </div>
-
+        <!-- 명단목록 -->
         <div class="glass-panel p-4 shadow-sm">
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="text-base font-bold text-slate-800">📋 데이터베이스 캐릭터 목록</h2>
-                <div class="flex gap-2">
-                    <button onclick="requestReset(this)" class="text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold tracking-wide shadow-sm">데이터 완전 초기화</button>
-                </div>
-            </div>
-            <div class="mb-3 flex flex-wrap gap-1.5 items-center bg-slate-50 p-2 rounded-lg border border-slate-200" id="config-player-filters">
-                <!-- JS 렌더링 -->
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                    <thead class="bg-slate-100 text-slate-500 text-xs">
-                        <tr>
-                            <th class="px-3 py-2 rounded-tl-lg font-bold">플레이어</th>
-                            <th class="px-3 py-2 font-bold">직업</th>
-                            <th class="px-3 py-2 font-bold">레벨</th>
-                            <th class="px-3 py-2 font-bold">자동배정 컨텐츠</th>
-                            <th class="px-3 py-2 text-center rounded-tr-lg font-bold">관리</th>
-                        </tr>
-                    </thead>
-                    <tbody id="config-table-body" class="text-xs">
-                        <!-- JS 렌더링 -->
-                    </tbody>
-                </table>
-            </div>
+            <div class="flex justify-between items-center mb-3"><h2 class="text-base font-bold text-slate-800">📋 데이터베이스 캐릭터 목록</h2><div class="flex gap-2"><button onclick="requestReset(this)" class="text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold tracking-wide shadow-sm">데이터 완전 초기화</button></div></div>
+            <div class="mb-3 flex flex-wrap gap-1.5 items-center bg-slate-50 p-2 rounded-lg border border-slate-200" id="config-player-filters"></div>
+            <div class="overflow-x-auto"><table class="w-full text-left text-sm text-slate-600 whitespace-nowrap"><thead class="bg-slate-100 text-slate-500 text-xs"><tr><th class="px-3 py-2 rounded-tl-lg font-bold">플레이어</th><th class="px-3 py-2 font-bold">직업</th><th class="px-3 py-2 font-bold">레벨</th><th class="px-3 py-2 font-bold">자동배정 컨텐츠</th><th class="px-3 py-2 text-center rounded-tr-lg font-bold">관리</th></tr></thead><tbody id="config-table-body" class="text-xs"></tbody></table></div>
         </div>
     </div>
 
     <!-- 4. 편의 기능 (CPM, 오레하) -->
     <div id="view-tools" class="hidden space-y-4">
+        <!-- 편의기능 내역 생략 없이 그대로 유지 (위쪽에 정의했던 템플릿 그대로 사용) -->
         <div class="flex gap-4 border-b border-slate-200 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
         </div>
 
-        <!-- CPM 계산기 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 max-w-6xl mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
-                    <div class="mb-5">
-                        <h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2>
-                        <p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟수를 입력하면 CPM을 계산합니다.</p>
-                    </div>
-
+                    <div class="mb-5"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2><p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟수를 입력하면 CPM을 계산합니다.</p></div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-500 mb-1">기록명 (선택)</label>
-                            <input type="text" id="cpm-record-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 하르둠 2관 1트">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-500 mb-1">스킬 또는 사이클명 (선택)</label>
-                            <input type="text" id="cpm-skill-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 버스트, 낙화, 종언의 빛">
-                        </div>
+                        <div><label class="block text-[11px] font-bold text-slate-500 mb-1">기록명 (선택)</label><input type="text" id="cpm-record-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 하르둠 2관 1트"></div>
+                        <div><label class="block text-[11px] font-bold text-slate-500 mb-1">스킬 또는 사이클명 (선택)</label><input type="text" id="cpm-skill-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 버스트, 낙화, 종언의 빛"></div>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="md:col-span-2 grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[11px] text-red-500 mb-1 font-bold">* 전투시간(분)</label>
-                                <div class="flex items-center">
-                                    <input type="number" id="cpm-min" min="0" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="0">
-                                    <span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">분</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] text-red-500 mb-1 font-bold">* 전투시간(초)</label>
-                                <div class="flex items-center">
-                                    <input type="number" id="cpm-sec" min="0" max="59" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="0">
-                                    <span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">초</span>
-                                </div>
-                            </div>
+                            <div><label class="block text-[11px] text-red-500 mb-1 font-bold">* 전투시간(분)</label><div class="flex items-center"><input type="number" id="cpm-min" min="0" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="0"><span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">분</span></div></div>
+                            <div><label class="block text-[11px] text-red-500 mb-1 font-bold">* 전투시간(초)</label><div class="flex items-center"><input type="number" id="cpm-sec" min="0" max="59" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="0"><span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">초</span></div></div>
                         </div>
-                        <div>
-                            <label class="block text-[11px] text-red-500 mb-1 font-bold">* 스킬 시전 횟수</label>
-                            <div class="flex items-center">
-                                <input type="number" id="cpm-casts" min="0" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="0">
-                                <span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">회</span>
-                            </div>
-                        </div>
+                        <div><label class="block text-[11px] text-red-500 mb-1 font-bold">* 스킬 시전 횟수</label><div class="flex items-center"><input type="number" id="cpm-casts" min="0" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="0"><span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">회</span></div></div>
                     </div>
-
                     <div class="border-t border-slate-200 pt-4 mt-2">
                         <p class="text-xs font-bold text-slate-600 mb-3">목표·비교 설정</p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[11px] text-slate-500 mb-1 font-bold">목표 CPM</label>
-                                <div class="flex items-center">
-                                    <input type="number" id="cpm-target" step="0.01" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="예: 5.2">
-                                    <span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">CPM</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] text-slate-500 mb-1 font-bold">허수아비·기준 CPM</label>
-                                <div class="flex items-center">
-                                    <input type="number" id="cpm-scarecrow" step="0.01" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="예: 5.45">
-                                    <span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">CPM</span>
-                                </div>
-                            </div>
+                            <div><label class="block text-[11px] text-slate-500 mb-1 font-bold">목표 CPM</label><div class="flex items-center"><input type="number" id="cpm-target" step="0.01" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="예: 5.2"><span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">CPM</span></div></div>
+                            <div><label class="block text-[11px] text-slate-500 mb-1 font-bold">허수아비·기준 CPM</label><div class="flex items-center"><input type="number" id="cpm-scarecrow" step="0.01" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right" placeholder="예: 5.45"><span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">CPM</span></div></div>
                         </div>
                     </div>
-
-                    <div>
-                        <label class="block text-[11px] text-slate-500 font-bold mb-1">패턴·컷신 제외 시간 (선택)</label>
-                        <div class="flex items-center">
-                            <input type="number" id="cpm-exclude" min="0" value="0" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right">
-                            <span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">초</span>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-center gap-2 my-5">
-                        <button onclick="runCpmCalculation()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded shadow-md transition flex items-center gap-2">
-                            📊 계산하기
-                        </button>
-                        <button onclick="resetCpmForm()" class="bg-white hover:bg-slate-50 text-slate-600 font-bold py-2.5 px-6 rounded shadow-sm transition border border-slate-300">
-                            초기화
-                        </button>
-                    </div>
-
+                    <div><label class="block text-[11px] text-slate-500 font-bold mb-1">패턴·컷신 제외 시간 (선택)</label><div class="flex items-center"><input type="number" id="cpm-exclude" min="0" value="0" class="w-full bg-white border border-slate-300 rounded-l px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500 text-right"><span class="bg-slate-100 border border-l-0 border-slate-300 px-3 py-2 rounded-r text-sm text-slate-600">초</span></div></div>
+                    <div class="flex justify-center gap-2 my-5"><button onclick="runCpmCalculation()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded shadow-md transition flex items-center gap-2">📊 계산하기</button><button onclick="resetCpmForm()" class="bg-white hover:bg-slate-50 text-slate-600 font-bold py-2.5 px-6 rounded shadow-sm transition border border-slate-300">초기화</button></div>
+                    
                     <div id="cpm-result-area" class="hidden space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm text-center">
-                                <p class="text-sm font-bold text-slate-500 mb-1">현재 CPM</p>
-                                <p class="text-3xl font-black text-slate-800 flex items-center justify-center gap-2">
-                                    <span class="text-yellow-500">⚡</span> <span id="res-current-cpm">0.00</span> <span class="text-lg text-slate-400 font-medium">회/분</span>
-                                </p>
-                            </div>
-                            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm text-center">
-                                <p class="text-sm font-bold text-slate-500 mb-1">평균 시전 간격</p>
-                                <p class="text-3xl font-black text-slate-800 flex items-center justify-center gap-2">
-                                    <span class="text-blue-500">⏱️</span> <span id="res-interval">0.00</span> <span class="text-lg text-slate-400 font-medium">초</span>
-                                </p>
-                            </div>
+                            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm text-center"><p class="text-sm font-bold text-slate-500 mb-1">현재 CPM</p><p class="text-3xl font-black text-slate-800 flex items-center justify-center gap-2"><span class="text-yellow-500">⚡</span> <span id="res-current-cpm">0.00</span> <span class="text-lg text-slate-400 font-medium">회/분</span></p></div>
+                            <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm text-center"><p class="text-sm font-bold text-slate-500 mb-1">평균 시전 간격</p><p class="text-3xl font-black text-slate-800 flex items-center justify-center gap-2"><span class="text-blue-500">⏱️</span> <span id="res-interval">0.00</span> <span class="text-lg text-slate-400 font-medium">초</span></p></div>
                         </div>
-
                         <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
-                            <h3 class="text-sm font-bold text-slate-700 mb-3 flex justify-between items-center">
-                                CPM 분석 결과
-                                <span id="target-success-badge" class="hidden text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded border border-green-300">목표 달성</span>
-                            </h3>
-
-                            <div id="target-progress-section" class="hidden mb-4 border-b border-slate-200 pb-4">
-                                <div class="flex justify-between text-xs font-bold mb-1">
-                                    <span class="text-slate-500">목표 달성률</span>
-                                    <span id="res-target-percent-text" class="text-slate-800">0%</span>
-                                </div>
-                                <div class="w-full bg-slate-200 rounded-full h-2.5 border border-slate-300 inset-shadow">
-                                    <div id="res-target-bar" class="h-2.5 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
-                                </div>
-                                <p id="res-target-msg" class="text-[11px] text-slate-500 mt-1.5"></p>
-                            </div>
-
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left text-sm cpm-table bg-white rounded">
-                                    <tbody class="text-slate-700">
-                                        <tr><th class="w-1/3 bg-slate-100 font-bold">전투시간</th><td id="res-time-str"></td></tr>
-                                        <tr><th class="bg-slate-100 font-bold">시전 횟수</th><td id="res-casts"></td></tr>
-                                        <tr><th class="bg-slate-100 font-bold">CPM 계산식</th><td id="res-formula"></td></tr>
-                                        <tr><th class="bg-slate-100 font-bold">30초당 시전 횟수</th><td id="res-30s"></td></tr>
-                                        <tr><th class="bg-slate-100 font-bold">평균 시전 간격</th><td id="res-interval-text"></td></tr>
-                                        <tr><th class="bg-slate-100 font-bold">시전 1회의 CPM 영향</th><td id="res-impact"></td></tr>
-                                        
-                                        <tr id="row-target-val" class="hidden"><th class="bg-slate-100 font-bold">목표 CPM</th><td id="res-target-val"></td></tr>
-                                        <tr id="row-target-min-casts" class="hidden"><th class="bg-slate-100 font-bold">목표 최소 시전 횟수</th><td id="res-target-min-casts"></td></tr>
-                                        <tr id="row-target-extra" class="hidden"><th class="bg-slate-100 font-bold">같은 시간 기준 추가 필요</th><td id="res-target-extra"></td></tr>
-                                        <tr id="row-target-rate" class="hidden"><th class="bg-slate-100 font-bold">목표 달성률</th><td id="res-target-rate"></td></tr>
-                                        
-                                        <tr id="row-scarecrow" class="hidden"><th class="bg-slate-100 font-bold">허수아비·기준 CPM</th><td id="res-scarecrow-cpm"></td></tr>
-                                        <tr id="row-efficiency" class="hidden"><th class="bg-slate-100 font-bold">기준 대비 실전 가동률</th><td id="res-efficiency"></td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="mt-4 border-t border-slate-200 pt-4">
-                                <p class="text-[11px] font-bold text-slate-500 mb-2">시전 횟수 ±2회 CPM 변화</p>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-center text-xs cpm-table bg-white rounded">
-                                        <thead class="bg-slate-100 text-slate-600">
-                                            <tr><th class="font-bold">차이</th><th class="font-bold">시전 횟수</th><th class="font-bold">CPM</th></tr>
-                                        </thead>
-                                        <tbody id="res-variance-body" class="text-slate-700">
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                            <h3 class="text-sm font-bold text-slate-700 mb-3 flex justify-between items-center">CPM 분석 결과<span id="target-success-badge" class="hidden text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded border border-green-300">목표 달성</span></h3>
+                            <div id="target-progress-section" class="hidden mb-4 border-b border-slate-200 pb-4"><div class="flex justify-between text-xs font-bold mb-1"><span class="text-slate-500">목표 달성률</span><span id="res-target-percent-text" class="text-slate-800">0%</span></div><div class="w-full bg-slate-200 rounded-full h-2.5 border border-slate-300 inset-shadow"><div id="res-target-bar" class="h-2.5 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div></div><p id="res-target-msg" class="text-[11px] text-slate-500 mt-1.5"></p></div>
+                            <div class="overflow-x-auto"><table class="w-full text-left text-sm cpm-table bg-white rounded"><tbody class="text-slate-700"><tr><th class="w-1/3 bg-slate-100 font-bold">전투시간</th><td id="res-time-str"></td></tr><tr><th class="bg-slate-100 font-bold">시전 횟수</th><td id="res-casts"></td></tr><tr><th class="bg-slate-100 font-bold">CPM 계산식</th><td id="res-formula"></td></tr><tr><th class="bg-slate-100 font-bold">30초당 시전 횟수</th><td id="res-30s"></td></tr><tr><th class="bg-slate-100 font-bold">평균 시전 간격</th><td id="res-interval-text"></td></tr><tr><th class="bg-slate-100 font-bold">시전 1회의 CPM 영향</th><td id="res-impact"></td></tr><tr id="row-target-val" class="hidden"><th class="bg-slate-100 font-bold">목표 CPM</th><td id="res-target-val"></td></tr><tr id="row-target-min-casts" class="hidden"><th class="bg-slate-100 font-bold">목표 최소 시전 횟수</th><td id="res-target-min-casts"></td></tr><tr id="row-target-extra" class="hidden"><th class="bg-slate-100 font-bold">같은 시간 기준 추가 필요</th><td id="res-target-extra"></td></tr><tr id="row-target-rate" class="hidden"><th class="bg-slate-100 font-bold">목표 달성률</th><td id="res-target-rate"></td></tr><tr id="row-scarecrow" class="hidden"><th class="bg-slate-100 font-bold">허수아비·기준 CPM</th><td id="res-scarecrow-cpm"></td></tr><tr id="row-efficiency" class="hidden"><th class="bg-slate-100 font-bold">기준 대비 실전 가동률</th><td id="res-efficiency"></td></tr></tbody></table></div>
+                            <div class="mt-4 border-t border-slate-200 pt-4"><p class="text-[11px] font-bold text-slate-500 mb-2">시전 횟수 ±2회 CPM 변화</p><div class="overflow-x-auto"><table class="w-full text-center text-xs cpm-table bg-white rounded"><thead class="bg-slate-100 text-slate-600"><tr><th class="font-bold">차이</th><th class="font-bold">시전 횟수</th><th class="font-bold">CPM</th></tr></thead><tbody id="res-variance-body" class="text-slate-700"></tbody></table></div></div>
                         </div>
-                        
-                        <div class="flex justify-center gap-2 pt-2 pb-2">
-                            <button id="btn-cpm-save" onclick="saveCpmRecord()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm">
-                                💾 현재 결과 클라우드에 저장
-                            </button>
-                            <button id="btn-cpm-cancel" onclick="resetCpmForm()" class="hidden bg-slate-500 hover:bg-slate-400 text-white font-bold py-2.5 px-6 rounded shadow-sm transition">
-                                취소
-                            </button>
-                        </div>
+                        <div class="flex justify-center gap-2 pt-2 pb-2"><button id="btn-cpm-save" onclick="saveCpmRecord()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm">💾 현재 결과 클라우드에 저장</button><button id="btn-cpm-cancel" onclick="resetCpmForm()" class="hidden bg-slate-500 hover:bg-slate-400 text-white font-bold py-2.5 px-6 rounded shadow-sm transition">취소</button></div>
                     </div>
                 </div>
-
-                <div class="lg:col-span-4 lg:border-l border-slate-200 lg:pl-5 h-full">
-                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm h-full min-h-[350px] flex flex-col">
-                        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
-                            <span class="flex items-center gap-1.5"><span class="text-blue-500">📁</span> 내 기록 보관함</span>
-                            <span id="cpm-record-count" class="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-bold">0개</span>
-                        </h3>
-                        <p class="text-[10px] text-slate-500 mb-3 border-b border-slate-200 pb-2">저장된 기록을 클릭하면 왼쪽 계산기로 다시 불러옵니다.</p>
-                        <div id="cpm-records-container" class="flex-grow space-y-2 overflow-y-auto pr-1">
-                            <!-- JS 렌더링 -->
-                        </div>
-                    </div>
-                </div>
+                <div class="lg:col-span-4 lg:border-l border-slate-200 lg:pl-5 h-full"><div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm h-full min-h-[350px] flex flex-col"><h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="text-blue-500">📁</span> 내 기록 보관함</span><span id="cpm-record-count" class="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-bold">0개</span></h3><p class="text-[10px] text-slate-500 mb-3 border-b border-slate-200 pb-2">저장된 기록을 클릭하면 왼쪽 계산기로 다시 불러옵니다.</p><div id="cpm-records-container" class="flex-grow space-y-2 overflow-y-auto pr-1"></div></div></div>
             </div>
         </div>
 
         <!-- 오레하 계산기 -->
         <div id="tool-view-oreha" class="hidden glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-orange-400 max-w-5xl mx-auto">
-            <div class="mb-6 text-center">
-                <h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1 flex items-center justify-center gap-2">
-                    <span class="text-orange-500">🔄</span> 어비도스 융화석 최적화 계산기
-                </h2>
-                <p class="text-xs text-slate-500">보유하신 재료를 입력하면 가장 효율적인 교환 비율을 찾아 최대 제작 횟수를 안내합니다.</p>
-            </div>
-
+            <div class="mb-6 text-center"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1 flex items-center justify-center gap-2"><span class="text-orange-500">🔄</span> 어비도스 융화석 최적화 계산기</h2><p class="text-xs text-slate-500">보유하신 재료를 입력하면 가장 효율적인 교환 비율을 찾아 최대 제작 횟수를 안내합니다.</p></div>
             <div class="grid lg:grid-cols-12 gap-5">
                 <div class="lg:col-span-5 space-y-4">
-                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
-                        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="text-orange-500 text-[10px]">✔️</span> 제작 목표 선택</h3>
-                        <div class="grid grid-cols-2 gap-2" id="oreha-type-btns">
-                            <!-- JS 렌더링 -->
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
-                        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="text-orange-500 text-[10px]">📦</span> 거래 가능 재료 입력</h3>
-                        <div class="space-y-3" id="oreha-inputs-container">
-                            <!-- JS 렌더링 -->
-                        </div>
-                    </div>
-                    
-                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm mt-4">
-                        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="text-green-500 text-[10px]">💰</span> 거래소 단가 입력</h3>
-                        <p class="text-[9px] text-slate-500 mb-3">* 100개 기준, 완제품은 1개 기준입니다.</p>
-                        <div class="grid grid-cols-2 gap-3" id="oreha-prices-container">
-                            <!-- JS 렌더링 -->
-                        </div>
-                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm"><h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="text-orange-500 text-[10px]">✔️</span> 제작 목표 선택</h3><div class="grid grid-cols-2 gap-2" id="oreha-type-btns"></div></div>
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm"><h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="text-orange-500 text-[10px]">📦</span> 거래 가능 재료 입력</h3><div class="space-y-3" id="oreha-inputs-container"></div></div>
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm mt-4"><h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="text-green-500 text-[10px]">💰</span> 거래소 단가 입력</h3><p class="text-[9px] text-slate-500 mb-3">* 100개 기준, 완제품은 1개 기준입니다.</p><div class="grid grid-cols-2 gap-3" id="oreha-prices-container"></div></div>
                 </div>
-
-                <div class="lg:col-span-7 h-full" id="oreha-result-container">
-                    <!-- JS 렌더링 -->
-                </div>
+                <div class="lg:col-span-7 h-full" id="oreha-result-container"></div>
             </div>
         </div>
     </div>
@@ -554,15 +323,13 @@
 
     const globalDungeonOrder = ['4막싱글', '4막하드', '종막싱글', '종막하드', '성당1단', '성당2단', '성당3단', '세르카싱글', '세르카하드', '세르카나메', '벨가노말', '벨가하드', '벨가나메'];
     
-    // 파티 보드 타겟 던전
-    const partyDungeons = [
-        { id: '4막하드', name: '4막', diff: '하드', level: 1720, diffColor: 'bg-purple-100 text-purple-700 border border-purple-200' },
-        { id: '종막하드', name: '종막', diff: '하드', level: 1730, diffColor: 'bg-purple-100 text-purple-700 border border-purple-200' },
-        { id: '세르카하드', name: '세르카', diff: '하드', level: 1730, diffColor: 'bg-purple-100 text-purple-700 border border-purple-200' },
-        { id: '세르카나메', name: '세르카', diff: '나메', level: 1740, diffColor: 'bg-red-100 text-red-700 border border-red-200' },
-        { id: '벨가노말', name: '벨가르딘', diff: '노말', level: 1750, diffColor: 'bg-blue-100 text-blue-700 border border-blue-200' },
-        { id: '벨가하드', name: '벨가르딘', diff: '하드', level: 1770, diffColor: 'bg-purple-100 text-purple-700 border border-purple-200' },
-        { id: '벨가나메', name: '벨가르딘', diff: '나메', level: 1780, diffColor: 'bg-red-100 text-red-700 border border-red-200' },
+    // 5열 칸반 보드용 카테고리 정의
+    const partyDungeonCategories = [
+        { id: '4막', name: '4막', diffs: [{name:'하드', level:1720, color:'bg-purple-100 text-purple-700 border border-purple-200'}] },
+        { id: '종막', name: '종막', diffs: [{name:'하드', level:1730, color:'bg-purple-100 text-purple-700 border border-purple-200'}] },
+        { id: '성당', name: '성당', diffs: [{name:'1단', level:1700, color:'bg-green-100 text-green-700 border border-green-200'}, {name:'2단', level:1720, color:'bg-blue-100 text-blue-700 border border-blue-200'}, {name:'3단', level:1750, color:'bg-purple-100 text-purple-700 border border-purple-200'}] },
+        { id: '세르카', name: '세르카', diffs: [{name:'하드', level:1730, color:'bg-purple-100 text-purple-700 border border-purple-200'}, {name:'나메', level:1740, color:'bg-red-100 text-red-700 border border-red-200'}] },
+        { id: '벨가', name: '벨가르딘', diffs: [{name:'노말', level:1750, color:'bg-blue-100 text-blue-700 border border-blue-200'}, {name:'하드', level:1770, color:'bg-purple-100 text-purple-700 border border-purple-200'}, {name:'나메', level:1780, color:'bg-red-100 text-red-700 border border-red-200'}] }
     ];
 
     window.calculateContents = function(level) {
@@ -652,20 +419,21 @@
             window.lastWeeklyResetId = currentResetId;
             let needsUpdate = false;
             window.charactersData.forEach(c => { if (c.completed && c.completed.length > 0) { c.completed = []; needsUpdate = true; } });
-            for (let dId in window.partyData) {
-                if (window.partyData[dId] && window.partyData[dId].isCleared) { window.partyData[dId].isCleared = false; needsUpdate = true; }
+            
+            if(Array.isArray(window.partyData)) {
+                window.partyData.forEach(p => {
+                    if(p.isCleared) { p.isCleared = false; needsUpdate = true; }
+                });
             }
             if (needsUpdate) window.saveToCloud();
         }
     };
 
     // --- [ 헬퍼: 캐릭터의 던전 클리어 최종 여부 반환 (개별 + 파티 동기화) ] ---
-    window.isCharClearedDungeon = function(char, dungeonDiff) {
-        // 1. 개별적으로 클릭하여 완료한 경우
-        if (char.completed && char.completed.includes(dungeonDiff)) return true;
-        // 2. 파티 보드에서 해당 파티가 클리어 처리된 경우
-        if (window.partyData[dungeonDiff] && window.partyData[dungeonDiff].isCleared) {
-            if (window.partyData[dungeonDiff].slots.includes(char.dbId)) return true;
+    window.isCharClearedDungeon = function(char, fullDiffStr) {
+        if (char.completed && char.completed.includes(fullDiffStr)) return true;
+        if (Array.isArray(window.partyData)) {
+            return window.partyData.some(p => (p.cat + p.diff) === fullDiffStr && p.isCleared && p.slots.includes(char.dbId));
         }
         return false;
     };
@@ -698,7 +466,7 @@
         if(window.dashboardMode === 'party') {
             btn.innerHTML = `<span>👤</span> 개인 숙제 보기`;
             btn.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
-            desc.innerHTML = "캐릭터 명단에서 빈칸으로 <b>드래그 앤 드롭</b>하거나, <b>빈칸을 클릭</b>하여 배정하세요.";
+            desc.innerHTML = "원하는 던전 열 아래의 <b>+ 파티 추가</b>를 눌러 파티를 짜보세요.";
         } else {
             btn.innerHTML = `<span>📊</span> 파티 짜기 보드`;
             btn.className = "text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded border border-blue-200 transition shadow-sm font-bold flex items-center gap-1";
@@ -739,6 +507,7 @@
 
         for (const [player, chars] of Object.entries(groupedByPlayer)) {
             const pColor = getPlayerColor(player);
+            // summaryStates가 명시적으로 true일때만 열림. (기본 undefined는 닫힘)
             const isExpanded = window.summaryStates[player] === true; 
             
             let html = `<div class="glass-panel border-t-4 ${pColor.border} p-3 md:p-4 bg-white">
@@ -850,15 +619,16 @@
         }
     }
 
-    // --- [ 파티 보드 렌더링 ] ---
+    // --- [ 5열 칸반 보드 (파티 짜기) 렌더링 ] ---
     function renderPartyDashboard(container) {
-        container.className = "flex flex-col lg:flex-row gap-5";
+        container.className = "flex flex-col lg:flex-row gap-4 h-full overflow-hidden";
         
+        // 1. 좌측 얇은 명단 패널 (width 줄임)
         let rosterHtml = `
-            <div class="lg:w-1/4 shrink-0">
-                <div class="glass-panel p-4 sticky top-4 max-h-[85vh] overflow-y-auto">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">👥 캐릭터 명단 (드래그)</h3>
-                    <div id="roster-container" class="space-y-4">`;
+            <div class="lg:w-48 shrink-0 flex flex-col">
+                <div class="glass-panel p-3 sticky top-4 max-h-[85vh] overflow-y-auto">
+                    <h3 class="text-[11px] font-bold text-slate-500 mb-2 border-b border-slate-200 pb-2 text-center">👥 명단 (드래그)</h3>
+                    <div id="roster-container" class="space-y-3">`;
         
         const grouped = window.charactersData.reduce((acc, char) => {
             if (!acc[char.player]) acc[char.player] = [];
@@ -869,17 +639,17 @@
         for (let player in grouped) {
             grouped[player].sort((a, b) => b.level - a.level);
             const pColor = getPlayerColor(player);
-            rosterHtml += `<div class="mb-4">
-                <div class="text-xs font-black ${pColor.text} mb-2 px-1">${player}</div>
-                <div class="flex flex-col gap-1.5">`;
+            rosterHtml += `<div class="mb-3">
+                <div class="text-[10px] font-black ${pColor.text} mb-1 px-1 bg-slate-50 rounded text-center border border-slate-100 py-0.5">${player}</div>
+                <div class="flex flex-col gap-1">`;
             
             grouped[player].forEach(char => {
                 const isSupp = supporters.includes(char.name);
                 const borderClass = isSupp ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200';
                 rosterHtml += `
-                    <div draggable="true" ondragstart="dragStart(event, '${char.dbId}')" class="flex justify-between items-center p-2 rounded-lg border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition bg-white ${borderClass}">
-                        <span class="text-xs font-bold text-slate-700">${isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : ''}${char.name}</span>
-                        <span class="text-[10px] text-slate-500 font-medium">Lv.${char.level}</span>
+                    <div draggable="true" ondragstart="dragStart(event, '${char.dbId}')" class="flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition bg-white ${borderClass}">
+                        <span class="text-[11px] font-bold text-slate-700">${isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : ''}${char.name}</span>
+                        <span class="text-[9px] text-slate-400 font-medium">${char.level}</span>
                     </div>
                 `;
             });
@@ -887,76 +657,118 @@
         }
         rosterHtml += `</div></div></div>`;
 
-        let boardHtml = `<div class="lg:w-3/4"><div id="dungeon-board" class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+        // 2. 우측 5열 칸반 보드 패널
+        let boardHtml = `<div class="flex-grow flex gap-4 overflow-x-auto pb-4 items-start">`;
         
-        partyDungeons.forEach(dungeon => {
-            if (!window.partyData[dungeon.id]) window.partyData[dungeon.id] = { slots: [null, null, null, null], isCleared: false };
-            const pData = window.partyData[dungeon.id];
+        partyDungeonCategories.forEach(cat => {
+            boardHtml += `<div class="w-[280px] shrink-0 flex flex-col gap-3">
+                            <div class="bg-slate-200/60 py-2 text-center font-black text-slate-700 rounded-lg shadow-sm border border-slate-200">${cat.name}</div>
+                            <div class="flex flex-col gap-3 min-h-[50px]">`;
             
-            boardHtml += `
-                <div class="glass-panel p-4 transition-all ${pData.isCleared ? 'party-completed' : ''}">
-                    <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-3">
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-base font-black text-slate-800 tracking-tight">${dungeon.name}</h3>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${dungeon.diffColor}">${dungeon.diff}</span>
+            // 이 카테고리에 속한 파티들 필터링 후 렌더링
+            const catParties = window.partyData.filter(p => p.cat === cat.id);
+            catParties.forEach(pData => {
+                const diffInfo = cat.diffs.find(d => d.name === pData.diff) || {color: 'bg-slate-100 text-slate-700 border-slate-300', level: pData.level};
+                
+                boardHtml += `
+                    <div class="glass-panel p-3 transition-all relative group ${pData.isCleared ? 'party-completed' : ''}">
+                        <button onclick="deleteParty('${pData.id}')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs z-10" title="파티 삭제">❌</button>
+                        
+                        <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2 pr-4">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${diffInfo.color}">${pData.diff}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-slate-400 font-bold">Lv.${pData.level}</span>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ${pData.isCleared ? 'checked' : ''} onchange="togglePartyCleared('${pData.id}')">
+                                </label>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-[11px] text-slate-400 font-bold">Lv. ${dungeon.level}</span>
-                            <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ${pData.isCleared ? 'checked' : ''} onchange="togglePartyCleared('${dungeon.id}')">
-                            </label>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 gap-2">
-            `;
-            
-            for (let i = 0; i < 4; i++) {
-                const slotCharId = pData.slots[i];
-                if (slotCharId) {
-                    const char = window.charactersData.find(c => c.dbId === slotCharId);
-                    if (char) {
-                        const pColor = getPlayerColor(char.player);
-                        const isSupp = supporters.includes(char.name);
+                        <div class="grid grid-cols-1 gap-1.5">
+                `;
+                
+                for (let i = 0; i < 4; i++) {
+                    const slotCharId = pData.slots[i];
+                    if (slotCharId) {
+                        const char = window.charactersData.find(c => c.dbId === slotCharId);
+                        if (char) {
+                            const pColor = getPlayerColor(char.player);
+                            const isSupp = supporters.includes(char.name);
+                            boardHtml += `
+                                <div class="flex items-center justify-between p-2 rounded border border-slate-200 bg-white shadow-sm">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[9px] font-bold ${pColor.label} ${pColor.text} px-1 py-0.5 rounded">${char.player}</span>
+                                        <span class="text-[11px] font-bold text-slate-700">${isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : ''}${char.name}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-[9px] text-slate-400">${char.level}</span>
+                                        <button onclick="removeCharacterFromSlot(event, '${pData.id}', ${i})" class="text-slate-300 hover:text-red-500 font-bold transition px-1 text-[10px]">✕</button>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            pData.slots[i] = null;
+                            i--;
+                        }
+                    } else {
                         boardHtml += `
-                            <div class="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-white shadow-sm">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-bold ${pColor.label} ${pColor.text} px-1.5 py-0.5 rounded">${char.player}</span>
-                                    <span class="text-sm font-bold text-slate-700">${isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : ''}${char.name}</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] text-slate-400">Lv.${char.level}</span>
-                                    <button onclick="removeCharacterFromSlot(event, '${dungeon.id}', ${i})" class="text-slate-300 hover:text-red-500 font-bold transition px-1">✕</button>
-                                </div>
+                            <div class="slot-droppable rounded p-2 text-center text-[10px] font-bold text-slate-400 cursor-pointer hover:bg-slate-50 transition flex items-center justify-center gap-1"
+                                 ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${pData.id}', ${i})" onclick="openDropdown(event, '${pData.id}', ${i})">
+                                <span>+</span> 빈자리
                             </div>
                         `;
-                    } else {
-                        window.partyData[dungeon.id].slots[i] = null;
-                        i--;
                     }
-                } else {
-                    boardHtml += `
-                        <div class="slot-droppable rounded-lg p-2.5 text-center text-[11px] font-bold text-slate-400 cursor-pointer hover:bg-slate-50 transition flex items-center justify-center gap-1"
-                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${dungeon.id}', ${i})" onclick="openDropdown(event, '${dungeon.id}', ${i})">
-                            <span>+</span> 빈자리 (클릭 또는 드롭)
-                        </div>
-                    `;
                 }
-            }
-            boardHtml += `</div></div>`;
-        });
-        boardHtml += `</div></div>`;
+                boardHtml += `</div></div>`;
+            });
 
+            // 난이도별 파티 추가 버튼 (호버 시 드롭다운)
+            let diffButtons = cat.diffs.map(d => `<button onclick="addParty('${cat.id}', '${d.name}', ${d.level})" class="px-2 py-1 text-[10px] font-bold rounded ${d.color} hover:brightness-95 shadow-sm transition">${d.name}</button>`).join('');
+            
+            boardHtml += `</div>
+                          <div class="group relative w-full mt-1">
+                              <button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition">+ 파티 추가</button>
+                              <div class="hidden group-hover:flex absolute bottom-full mb-1 left-0 w-full bg-white border border-slate-200 shadow-xl rounded-lg p-2 gap-1.5 flex-wrap justify-center z-20">
+                                  ${diffButtons}
+                              </div>
+                          </div>
+                      </div>`;
+        });
+        
+        boardHtml += `</div>`;
         container.innerHTML = rosterHtml + boardHtml;
     }
 
-    // --- [ 파티 배정 관련 및 완료 토글 로직 ] ---
+    // --- [ 파티 생성 및 배정 로직 ] ---
+    window.addParty = function(catId, diffName, diffLevel) {
+        if (!Array.isArray(window.partyData)) window.partyData = [];
+        window.partyData.push({
+            id: 'party_' + Date.now(),
+            cat: catId,
+            diff: diffName,
+            level: diffLevel,
+            slots: [null, null, null, null],
+            isCleared: false
+        });
+        window.saveToCloud();
+        renderDashboard();
+    };
+
+    window.deleteParty = function(partyId) {
+        window.partyData = window.partyData.filter(p => p.id !== partyId);
+        window.saveToCloud();
+        renderDashboard();
+    };
+
     window.toggleCompletion = function(dbId, content) {
         const char = window.charactersData.find(c => c.dbId === dbId);
         if (!char) return;
 
         // 예외 차단: 파티 단위로 클리어 된 경우 개별 조작 금지
-        if (window.partyData[content] && window.partyData[content].isCleared) {
-            if (window.partyData[content].slots.includes(dbId)) {
+        if (Array.isArray(window.partyData)) {
+            const clearedViaParty = window.partyData.some(p => (p.cat + p.diff) === content && p.isCleared && p.slots.includes(dbId));
+            if (clearedViaParty) {
                 showToast('파티 단위로 클리어 된 내역이 있어 개별 상태를 변경할 수 없습니다.', 'warning');
                 return;
             }
@@ -973,57 +785,59 @@
     window.dragStart = function(e, charId) { e.dataTransfer.setData('charId', charId); closeDropdown(); };
     window.allowDrop = function(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
     window.dragLeave = function(e) { e.currentTarget.classList.remove('drag-over'); };
-    window.drop = function(e, dungeonId, slotIndex) {
+    window.drop = function(e, partyId, slotIndex) {
         e.preventDefault(); e.currentTarget.classList.remove('drag-over');
         const charId = e.dataTransfer.getData('charId');
-        if (charId) assignCharacterToSlot(charId, dungeonId, slotIndex);
+        if (charId) assignCharacterToSlot(charId, partyId, slotIndex);
     };
 
-    window.assignCharacterToSlot = function(charId, dungeonId, slotIndex) {
+    window.assignCharacterToSlot = function(charId, partyId, slotIndex) {
         const char = window.charactersData.find(c => c.dbId === charId);
-        const dungeon = partyDungeons.find(d => d.id === dungeonId);
-        if (!char || !dungeon) return;
-        if (char.level < dungeon.level) { showToast(`입장 레벨이 부족합니다.`, 'warning'); return; }
+        const party = window.partyData.find(p => p.id === partyId);
+        if (!char || !party) return;
+        if (char.level < party.level) { showToast(`입장 레벨이 부족합니다. (${char.level} / ${party.level})`, 'warning'); return; }
 
-        const currentParty = window.partyData[dungeonId].slots;
-        if (currentParty.includes(charId) && currentParty.indexOf(charId) !== slotIndex) {
-            showToast('이미 이 던전에 배정되었습니다.', 'warning'); return;
+        if (party.slots.includes(charId) && party.slots.indexOf(charId) !== slotIndex) {
+            showToast('이미 이 파티에 배정되었습니다.', 'warning'); return;
         }
 
-        const existingIndex = currentParty.indexOf(charId);
-        if (existingIndex > -1) currentParty[existingIndex] = null;
+        const existingIndex = party.slots.indexOf(charId);
+        if (existingIndex > -1) party.slots[existingIndex] = null;
 
-        currentParty[slotIndex] = charId;
+        party.slots[slotIndex] = charId;
         window.saveToCloud();
         renderDashboard();
     };
 
-    window.removeCharacterFromSlot = function(e, dungeonId, slotIndex) {
+    window.removeCharacterFromSlot = function(e, partyId, slotIndex) {
         e.stopPropagation(); 
-        window.partyData[dungeonId].slots[slotIndex] = null;
+        const party = window.partyData.find(p => p.id === partyId);
+        if(party) party.slots[slotIndex] = null;
         window.saveToCloud();
         renderDashboard();
         closeDropdown();
     };
 
-    window.togglePartyCleared = function(dungeonId) {
-        window.partyData[dungeonId].isCleared = !window.partyData[dungeonId].isCleared;
+    window.togglePartyCleared = function(partyId) {
+        const party = window.partyData.find(p => p.id === partyId);
+        if(party) party.isCleared = !party.isCleared;
         window.saveToCloud();
-        renderAll(); // 파티 보드 변경 시 개인 숙제, 검색 필터 모두에 영향을 주므로 전체 렌더링 갱신
+        renderAll();
     };
 
     let currentDropdownTarget = null;
-    window.openDropdown = function(e, dungeonId, slotIndex) {
+    window.openDropdown = function(e, partyId, slotIndex) {
         e.stopPropagation();
-        const dungeon = partyDungeons.find(d => d.id === dungeonId);
+        const party = window.partyData.find(p => p.id === partyId);
+        if(!party) return;
+        
         const rect = e.currentTarget.getBoundingClientRect();
         const menu = document.getElementById('dropdown-menu');
         const list = document.getElementById('dropdown-list');
         list.innerHTML = '';
-        currentDropdownTarget = { dungeonId, slotIndex };
+        currentDropdownTarget = { partyId, slotIndex };
 
-        const currentParty = window.partyData[dungeonId].slots;
-        let availableChars = window.charactersData.filter(char => char.level >= dungeon.level && !currentParty.includes(char.dbId));
+        let availableChars = window.charactersData.filter(char => char.level >= party.level && !party.slots.includes(char.dbId));
         availableChars.sort((a,b) => b.level - a.level);
 
         if (availableChars.length === 0) {
@@ -1041,7 +855,7 @@
                     </div>
                     <span class="text-[10px] text-slate-400 font-medium ml-2">Lv.${char.level}</span>
                 `;
-                li.onclick = () => { assignCharacterToSlot(char.dbId, dungeonId, slotIndex); closeDropdown(); };
+                li.onclick = () => { assignCharacterToSlot(char.dbId, partyId, slotIndex); closeDropdown(); };
                 list.appendChild(li);
             });
         }
@@ -1268,8 +1082,10 @@
     window.requestDelete = function(dbId, btnElement) {
         if (btnElement.innerText === "정말?") {
             window.charactersData = window.charactersData.filter(c => c.dbId !== dbId);
-            for (let dId in window.partyData) {
-                if (window.partyData[dId]) window.partyData[dId].slots = window.partyData[dId].slots.map(sId => sId === dbId ? null : sId);
+            if(Array.isArray(window.partyData)) {
+                window.partyData.forEach(p => {
+                    p.slots = p.slots.map(sId => sId === dbId ? null : sId);
+                });
             }
             window.saveToCloud(); renderAll(); showToast('캐릭터가 삭제되었습니다.', 'warning');
         } else {
@@ -1288,7 +1104,7 @@
         if (btnElement.innerText === "확인") {
             window.charactersData = [];
             window.cpmData = { inputs: {}, records: [] };
-            window.partyData = {};
+            window.partyData = [];
             window.saveToCloud(); renderAll();
             btnElement.innerText = "데이터 완전 초기화";
             btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
