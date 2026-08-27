@@ -64,14 +64,12 @@
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-white border border-slate-200 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-<!-- 파티 배정 드롭다운 메뉴 -->
 <div id="dropdown-menu" class="hidden fixed bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden text-sm min-w-[150px]">
     <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 font-bold text-slate-600 text-[11px]">캐릭터 선택</div>
     <ul id="dropdown-list" class="max-h-60 overflow-y-auto"></ul>
 </div>
 
 <script>
-    // 본인의 앱스 스크립트 배포 URL입니다.
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
 
     let isCloudConnected = false;
@@ -130,7 +128,7 @@
 
                 if (!window.hasCheckedWeeklyReset && window.charactersData.length > 0) {
                     window.hasCheckedWeeklyReset = true;
-                    checkAndRunWeeklyReset();
+                    window.checkAndRunWeeklyReset();
                 }
             } 
             
@@ -175,7 +173,6 @@
     setTimeout(initCloudDB, 300);
 </script>
 
-<!-- 가로폭을 95%로 넓게 사용하도록 수정됨 -->
 <div class="max-w-[95%] mx-auto space-y-5 pb-10">
     <div class="flex justify-end items-center gap-2 mb-1">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse"></span>
@@ -194,7 +191,6 @@
         <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
-    <!-- 1. 대시보드 -->
     <div id="view-dashboard" class="space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
             <div>
@@ -215,7 +211,6 @@
         </div>
     </div>
 
-    <!-- 2. 파티 필터 검색 -->
     <div id="view-filter" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm">
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
@@ -226,7 +221,6 @@
         </div>
     </div>
 
-    <!-- 3. 캐릭터 설정 -->
     <div id="view-config" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm border-l-4 border-l-green-500" id="form-panel">
             <h2 id="form-title" class="text-base font-bold mb-3 text-slate-800 flex items-center gap-2"><span>➕</span> 캐릭터 등록 / 수정 (자동 계산)</h2>
@@ -243,12 +237,12 @@
         </div>
     </div>
 
-    <!-- 4. 편의 기능 (CPM, 오레하) -->
     <div id="view-tools" class="hidden space-y-4">
         <div class="flex gap-4 border-b border-slate-200 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
         </div>
+        
         <!-- CPM 계산기 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 max-w-6xl mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
@@ -309,7 +303,7 @@
 </div>
 
 <script>
-    // --- [ 기초 데이터 및 유틸 ] ---
+    // 기초 데이터 및 유틸
     const dungeonCategories = [
         { id: '4막', label: '4막', diffs: ['4막싱글', '4막하드'] },
         { id: '종막', label: '종막', diffs: ['종막싱글', '종막하드'] },
@@ -399,6 +393,7 @@
         if (tooltip) { tooltip.classList.remove('opacity-100'); tooltip.classList.add('opacity-0'); }
     };
 
+    // 주간 초기화 로직
     window.checkAndRunWeeklyReset = function() {
         const now = new Date();
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -426,7 +421,7 @@
         }
     };
 
-    // --- [ 헬퍼: 캐릭터의 던전 클리어 최종 여부 반환 (개별 + 파티 동기화) ] ---
+    // 헬퍼: 캐릭터의 던전 클리어 최종 여부 반환 (개별 + 파티 동기화)
     window.isCharClearedDungeon = function(char, fullDiffStr) {
         if (char.completed && char.completed.includes(fullDiffStr)) return true;
         if (Array.isArray(window.partyData)) {
@@ -435,7 +430,6 @@
         return false;
     };
 
-    // --- [ 탭 및 모드 전환 로직 ] ---
     window.renderAll = function() {
         renderDashboard(); 
         renderFilterResults(); 
@@ -497,7 +491,6 @@
         else renderPartyDashboard(container);
     }
 
-    // --- [ 개인 숙제 대시보드 렌더링 ] ---
     function renderPersonalDashboard(container) {
         container.className = "grid grid-cols-1 lg:grid-cols-2 gap-4";
         const groupedByPlayer = window.charactersData.reduce((acc, char) => {
@@ -622,11 +615,9 @@
         }
     }
 
-    // --- [ 5열 칸반 보드 (파티 짜기) 렌더링 ] ---
     function renderPartyDashboard(container) {
         container.className = "flex flex-col gap-4 h-full";
         
-        // 필터 UI (파티 보드 전용)
         let filterHtml = `
             <div class="glass-panel p-3 flex flex-wrap gap-2 items-center shadow-sm bg-white">
                 <span class="text-xs font-bold text-slate-500 mr-1">🔍 보드 필터:</span>
@@ -639,7 +630,6 @@
         
         let mainContent = `<div class="flex flex-col lg:flex-row gap-4 overflow-hidden h-full">`;
 
-        // 1. 좌측 얇은 명단 패널
         let rosterHtml = `
             <div class="lg:w-48 shrink-0 flex flex-col">
                 <div class="glass-panel p-3 sticky top-4 max-h-[85vh] overflow-y-auto">
@@ -673,7 +663,6 @@
         }
         rosterHtml += `</div></div></div>`;
 
-        // 2. 우측 칸반 보드 패널 (필터링 적용)
         let boardHtml = `<div class="flex-grow flex gap-4 overflow-x-auto pb-4 items-start">`;
         
         partyDungeonCategories.filter(cat => window.partyBoardFilters.has(cat.id)).forEach(cat => {
@@ -756,7 +745,6 @@
         container.innerHTML = filterHtml + mainContent;
     }
 
-    // --- [ 파티 생성 및 배정 로직 ] ---
     window.addParty = function(catId, diffName, diffLevel) {
         if (!Array.isArray(window.partyData)) window.partyData = [];
         window.partyData.push({
@@ -887,7 +875,6 @@
     window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
     document.addEventListener('click', (e) => { if (!e.target.closest('#dropdown-menu')) closeDropdown(); });
 
-    // --- [ 검색 필터 (개인 숙제 탭) ] ---
     let selectedCategories = new Set();
     window.toggleFilter = function(categoryId) {
         if (selectedCategories.has(categoryId)) selectedCategories.delete(categoryId);
@@ -989,7 +976,6 @@
         });
     }
 
-    // --- [ 캐릭터 설정 및 관리 ] ---
     function renderConfigFilters() {
         const container = document.getElementById('config-player-filters');
         if (!container) return;
@@ -1135,7 +1121,6 @@
         }
     };
 
-    // --- [ 편의 기능 탭 및 CPM 계산기 ] ---
     window.switchToolTab = function(tabName) {
         const tabCpm = document.getElementById('tool-tab-cpm');
         const tabOreha = document.getElementById('tool-tab-oreha');
@@ -1378,7 +1363,6 @@
         }
     };
 
-    // --- [ 오레하 계산기 로직 ] ---
     const OREHA_REQ = { normal: { w: 86, g: 45, b: 33, gold: 384, name: '하급 어비도스 융화석' }, advanced: { w: 112, g: 59, b: 43, gold: 499, name: '상급 어비도스 융화석' } };
 
     window.setOrehaType = function(type) { window.oState.craftType = type; window.saveToCloud(); renderOrehaUI(); }
