@@ -19,7 +19,8 @@
         .supporter-glow { border-left-color: #fbbf24 !important; border-left-width: 4px !important; background: linear-gradient(90deg, rgba(253,230,138,0.2) 0%, rgba(255,255,255,1) 100%) !important; }
         .slot-droppable { border: 2px dashed #cbd5e1; transition: all 0.2s; }
         .slot-droppable.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
-        .party-completed { opacity: 0.55; filter: grayscale(80%); transition: all 0.3s; }
+        /* 💡 완료된 파티 더 짙고 어둡게 처리 */
+        .party-completed { opacity: 0.25; filter: grayscale(100%) brightness(0.9); transition: all 0.3s; }
         ::-webkit-scrollbar { width: 8px; height: 10px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -157,7 +158,7 @@
         </div>
 
         <!-- 오레하 계산기 -->
-        <div id="tool-view-oreha" class="hidden glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-orange-400 mx-auto">
+        <div id="tool-view-oreha" class="hidden glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-orange-400 max-w-5xl mx-auto">
             <div class="mb-6 text-center"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1 flex items-center justify-center gap-2"><span class="text-orange-500">🔄</span> 어비도스 융화석 최적화 계산기</h2><p class="text-xs text-slate-500">보유하신 재료를 입력하면 가장 효율적인 교환 비율을 찾아 최대 제작 횟수를 안내합니다.</p></div>
             <div class="grid lg:grid-cols-12 gap-5">
                 <div class="lg:col-span-5 space-y-4">
@@ -302,7 +303,6 @@
         return 'text-slate-700 bg-slate-100 border-slate-300';
     }
 
-    // 💡 [타이틀 변경 기능]
     window.editAppTitle = function() {
         const currentTitle = window.appState ? window.appState.title : '💻 로스트아크 클라우드 대시보드';
         const newTitle = prompt("메인 화면의 타이틀을 입력해주세요:", currentTitle);
@@ -581,7 +581,6 @@
         
         let mainContent = '<div class="flex flex-col lg:flex-row gap-3 lg:gap-4 overflow-hidden h-full">';
 
-        // 좌측 명단 패널
         let rosterHtml = '<div class="lg:w-48 shrink-0 flex flex-col"><div class="glass-panel p-2.5 lg:p-3 sticky top-4 max-h-[85vh] overflow-y-auto">';
         rosterHtml += '<h3 class="text-[11px] font-bold text-slate-500 mb-2 border-b border-slate-200 pb-2 text-center">👥 명단 (드래그)</h3>';
         rosterHtml += '<div id="roster-container" class="space-y-3">';
@@ -613,7 +612,6 @@
         }
         rosterHtml += '</div></div></div>';
 
-        // 💡 [16:9 와이드 최적화] 던전 보드 리스트 간격 및 너비 축소
         let boardHtml = '<div class="flex-grow flex gap-2.5 xl:gap-3 overflow-x-auto pb-4 items-start">';
         
         partyDungeonCategories.filter(cat => window.partyBoardFilters.has(cat.id)).forEach(cat => {
@@ -651,14 +649,16 @@
                         const pColor = getPlayerColor(char.player);
                         const isSupp = supporters.includes(char.name);
                         
-                        // 💡 [스왑 드래그 앤 드롭 지원] 슬롯 캐릭터에 dragStartFromSlot 추가
-                        boardHtml += '<div draggable="true" ondragstart="dragStartFromSlot(event, \'' + char.dbId + '\', \'' + pData.id + '\', ' + i + ')" ';
+                        // 💡 [클릭 시 바로 교체 드롭다운 열기 추가] onClick 이벤트 부여
+                        boardHtml += '<div onclick="openDropdown(event, \'' + pData.id + '\', ' + i + ')" ';
+                        boardHtml += 'draggable="true" ondragstart="dragStartFromSlot(event, \'' + char.dbId + '\', \'' + pData.id + '\', ' + i + ')" ';
                         boardHtml += 'ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, \'' + pData.id + '\', ' + i + ')" ';
-                        boardHtml += 'class="flex items-center justify-between p-1.5 rounded border ' + pColor.border + ' ' + pColor.bg + ' shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition">';
+                        boardHtml += 'class="flex items-center justify-between p-1.5 rounded border ' + pColor.border + ' ' + pColor.bg + ' shadow-sm cursor-pointer hover:border-blue-400 hover:shadow-md transition">';
                         boardHtml += '<div class="flex items-center gap-1.5 truncate">';
                         boardHtml += '<span class="text-[9px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1.5 py-0.5 rounded leading-none flex-shrink-0">' + char.player + '</span>';
                         boardHtml += '<span class="text-[12px] font-black text-slate-800 tracking-wide truncate">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : '') + char.name + '</span></div>';
                         boardHtml += '<div class="flex items-center gap-1 flex-shrink-0"><span class="text-[9px] text-slate-400 font-medium">' + char.level + '</span>';
+                        // x버튼 이벤트 전파 방지로 삭제만 되게끔 유지
                         boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-400 hover:text-red-500 font-bold transition px-1 text-[10px] cursor-pointer">✕</button></div></div>';
                     } else {
                         if (slotCharId) pData.slots[i] = "";
@@ -724,7 +724,6 @@
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
-    // 💡 [드래그 앤 드롭 스왑 로직 추가]
     window.dragStart = function(e, charId) { 
         e.dataTransfer.effectAllowed = 'copyMove'; 
         e.dataTransfer.setData('text/plain', JSON.stringify({ charId: charId })); 
@@ -760,14 +759,13 @@
                     assignCharacterToSlot(data.charId, partyId, slotIndex, data.sourcePartyId, data.sourceSlotIndex);
                 }
             } catch(err) {
-                assignCharacterToSlot(dataStr, partyId, slotIndex); // Fallback
+                assignCharacterToSlot(dataStr, partyId, slotIndex);
             }
         } else {
             showToast('데이터를 가져오지 못했습니다. 클릭하여 드롭다운으로 추가해 보세요.', 'warning');
         }
     };
 
-    // 💡 [배정, 스왑, 유효성 검사 종합 로직]
     window.assignCharacterToSlot = function(charId, targetPartyId, targetSlotIndex, sourcePartyId, sourceSlotIndex) {
         const char = window.charactersData.find(c => c.dbId === charId);
         const targetParty = window.partyData.find(p => p.id === targetPartyId);
@@ -778,12 +776,11 @@
         if (!targetParty.slots) targetParty.slots = ["", "", "", ""];
         const targetSlotCharId = targetParty.slots[targetSlotIndex];
 
-        if (charId === targetSlotCharId) return; // 제자리 드롭은 무시
+        if (charId === targetSlotCharId) return;
 
-        // 1. 타겟 파티 유효성 검사
         const isPlayerAlreadyInParty = targetParty.slots.some((sId, idx) => {
-            if(!sId || idx === targetSlotIndex) return false; // 덮어씌워질 자리는 제외
-            if(sourcePartyId === targetPartyId && idx === sourceSlotIndex) return false; // 내 원래 자리는 어차피 빠질 거니 제외
+            if(!sId || idx === targetSlotIndex) return false;
+            if(sourcePartyId === targetPartyId && idx === sourceSlotIndex) return false;
             
             const c = window.charactersData.find(x => x.dbId === sId);
             return c && c.player === char.player;
@@ -800,7 +797,6 @@
             return;
         }
 
-        // 2. 타겟 슬롯에 캐릭터가 있을 경우 스왑 처리
         let sourceParty = null;
         if (sourcePartyId !== undefined && sourcePartyId !== null) {
             sourceParty = window.partyData.find(p => p.id === sourcePartyId);
@@ -824,16 +820,15 @@
                 }
                 
                 if (canSwap) {
-                    sourceParty.slots[sourceSlotIndex] = targetSlotCharId; // 아름다운 스왑 성공
+                    sourceParty.slots[sourceSlotIndex] = targetSlotCharId;
                 } else {
-                    sourceParty.slots[sourceSlotIndex] = ""; // 스왑 불가면 방 빼고 로스터로 쫓겨남
+                    sourceParty.slots[sourceSlotIndex] = "";
                 }
             } else {
                 sourceParty.slots[sourceSlotIndex] = "";
             }
         }
 
-        // 3. 내 캐릭터 안착
         targetParty.slots[targetSlotIndex] = charId;
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
@@ -864,15 +859,21 @@
         list.innerHTML = '';
         currentDropdownTarget = { partyId, slotIndex };
 
+        // 💡 [필터링: 현재 슬롯에 들어있는 캐릭터는 덮어씌울 거니까 제외 조건에서 무시]
         let availableChars = window.charactersData.filter(char => {
             if (char.level < party.level) return false;
-            if (party.slots && party.slots.includes(char.dbId)) return false;
+            
+            const inThisPartyOtherSlot = party.slots.some((sId, idx) => sId === char.dbId && idx !== slotIndex);
+            if (inThisPartyOtherSlot) return false;
+            
+            // 현재 슬롯과 똑같은 자기 자신은 굳이 다시 덮어씌울 필요 없으니 숨김
+            if (party.slots[slotIndex] === char.dbId) return false;
             
             const inOtherParty = window.partyData.some(p => p.cat === party.cat && p.id !== party.id && p.slots && p.slots.includes(char.dbId));
             if (inOtherParty) return false;
             
-            const playerInThisParty = party.slots.some(sId => {
-                if (!sId) return false;
+            const playerInThisParty = party.slots.some((sId, idx) => {
+                if (!sId || idx === slotIndex) return false; // 선택한 슬롯에 있는 캐릭터는 무시
                 const c = window.charactersData.find(x => x.dbId === sId);
                 return c && c.player === char.player;
             });
@@ -897,10 +898,20 @@
             });
         }
 
-        menu.style.display = 'block';
-        let topPos = rect.bottom + window.scrollY + 5;
-        let leftPos = rect.left + window.scrollX;
-        if (topPos + menu.offsetHeight > window.innerHeight + window.scrollY) topPos = rect.top + window.scrollY - menu.offsetHeight - 5;
+        // 💡 [드롭박스 위치 스마트 보정 버그 해결]
+        menu.style.display = 'block'; 
+        let topPos = rect.bottom + 5; 
+        let leftPos = rect.left;
+        
+        // 화면 하단으로 벗어나는지 체크해서 위로 올려버림
+        if (rect.bottom + menu.offsetHeight + 5 > window.innerHeight) {
+            topPos = rect.top - menu.offsetHeight - 5;
+        }
+        // 우측으로 벗어나는지 체크해서 안으로 들이기
+        if (rect.left + menu.offsetWidth > window.innerWidth) {
+            leftPos = window.innerWidth - menu.offsetWidth - 10;
+        }
+        
         menu.style.top = topPos + 'px';
         menu.style.left = leftPos + 'px';
     };
