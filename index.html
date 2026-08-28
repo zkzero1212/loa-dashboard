@@ -11,6 +11,7 @@
             color: #1e293b;
             font-family: 'Pretendard', sans-serif;
             overflow-y: scroll;
+            overflow-x: hidden;
         }
         .glass-panel {
             background: rgba(255, 255, 255, 0.98);
@@ -46,6 +47,7 @@
         .slot-droppable.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
         .party-completed { opacity: 0.55; filter: grayscale(80%); transition: all 0.3s; }
 
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 10px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -61,6 +63,7 @@
 </head>
 <body class="p-3 md:p-5 min-h-screen relative">
 
+<!-- 툴팁 및 토스트 컨테이너 -->
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-white border border-slate-200 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -70,17 +73,21 @@
     <ul id="dropdown-list" class="max-h-60 overflow-y-auto"></ul>
 </div>
 
+<!-- 메인 레이아웃 (95% 와이드) -->
 <div class="max-w-[95%] mx-auto space-y-5 pb-10">
+    <!-- 상태 표시줄 -->
     <div class="flex justify-end items-center gap-2 mb-1">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse"></span>
         <span id="cloud-status" class="text-[11px] text-orange-500 font-bold tracking-wide">클라우드 연결 중...</span>
     </div>
 
+    <!-- 헤더 -->
     <div class="text-center space-y-1.5 relative">
         <h1 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">💻 로스트아크 클라우드 대시보드</h1>
         <p class="text-xs md:text-sm text-slate-500">칸반 보드 기반 파티 플래너 / 와이드 뷰 지원 / 수요일 자동 리셋</p>
     </div>
 
+    <!-- 메인 탭 메뉴 -->
     <div class="flex flex-wrap justify-center gap-2 mb-4">
         <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">📊 대시보드</button>
         <button onclick="switchTab('filter')" id="tab-filter" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">🔍 던전 파티 검색</button>
@@ -88,7 +95,7 @@
         <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
-    <!-- 1. 대시보드 탭 -->
+    <!-- 1. 대시보드 (파티 보드 & 개인 숙제) -->
     <div id="view-dashboard" class="space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
             <div>
@@ -105,7 +112,7 @@
             </div>
         </div>
         <div id="dashboard-container">
-            <!-- JS 렌더링 -->
+            <!-- 렌더링 영역 -->
         </div>
     </div>
 
@@ -115,9 +122,7 @@
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
             <div id="filter-checkboxes" class="flex flex-wrap gap-2"></div>
         </div>
-        <div id="filter-results" class="space-y-4">
-            <div class="text-center text-slate-400 py-10 glass-panel text-sm font-medium">던전을 체크하시면 난이도별로 그룹화되어 나타납니다.</div>
-        </div>
+        <div id="filter-results" class="space-y-4"></div>
     </div>
 
     <!-- 3. 캐릭터 설정 -->
@@ -143,9 +148,10 @@
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
         </div>
+        
+        <!-- CPM 계산기 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 max-w-6xl mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
-                <!-- CPM 계산 내용 렌더링 -->
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
                     <div class="mb-5"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2><p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟수를 입력하면 CPM을 계산합니다.</p></div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -203,6 +209,26 @@
 </div>
 
 <script>
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
+
+    let isCloudConnected = false;
+    let isInitialLoad = true;
+
+    window.charactersData = [];
+    window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
+    window.partyData = []; 
+    window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
+    
+    window.lastWeeklyResetId = null;
+    window.hasCheckedWeeklyReset = false;
+    window.configSelectedPlayers = new Set();
+    let editingDbId = null;
+    let editingCpmId = null;
+
+    window.dashboardMode = 'party';
+    window.summaryStates = {}; 
+    window.partyBoardFilters = new Set(['4막', '종막', '성당', '세르카', '벨가']); 
+
     const dungeonCategories = [
         { id: '4막', label: '4막', diffs: ['4막싱글', '4막하드'] },
         { id: '종막', label: '종막', diffs: ['종막싱글', '종막하드'] },
@@ -269,8 +295,11 @@
         const remainingStr = element.getAttribute('data-remaining');
         
         let html = '<div class="font-bold text-slate-700 mb-1.5 border-b border-slate-200 pb-1">상세 정보</div>';
-        html += '<div class="mb-1.5 text-[12px] bg-yellow-50 p-2 rounded border border-yellow-200 shadow-sm whitespace-nowrap"><span class="text-yellow-700 font-bold block mb-0.5">남은 캐릭터</span><span class="text-slate-800 font-black tracking-wide block leading-snug">' + (remainingStr || '없음') + '</span></div>';
-        html += '<div class="text-[11px] pl-1 whitespace-nowrap"><span class="text-slate-500 font-bold block mb-0.5">배정된 캐릭터</span><span class="text-slate-600 block leading-snug">' + (assignedStr || '없음') + '</span></div>';
+        html += '<div class="mb-1.5 text-[12px] bg-yellow-50 p-2 rounded border border-yellow-200 shadow-sm whitespace-nowrap">';
+        html += '<span class="text-yellow-700 font-bold block mb-0.5">남은 캐릭터</span>';
+        html += '<span class="text-slate-800 font-black tracking-wide block leading-snug">' + (remainingStr || '없음') + '</span></div>';
+        html += '<div class="text-[11px] pl-1 whitespace-nowrap"><span class="text-slate-500 font-bold block mb-0.5">배정된 캐릭터</span>';
+        html += '<span class="text-slate-600 block leading-snug">' + (assignedStr || '없음') + '</span></div>';
         
         tooltip.innerHTML = html;
         const rect = element.getBoundingClientRect();
@@ -283,6 +312,109 @@
     window.hideTooltip = function() {
         const tooltip = document.getElementById('custom-tooltip');
         if (tooltip) { tooltip.classList.remove('opacity-100'); tooltip.classList.add('opacity-0'); }
+    };
+
+    // 가짜 네트워크 오류 방지를 위한 격리된 데이터 로딩 함수
+    async function initCloudDB() {
+        const ind = document.getElementById('cloud-indicator');
+        const st = document.getElementById('cloud-status');
+
+        if(GAS_WEB_APP_URL.includes("여기에_URL을_붙여넣으세요")) {
+            if (ind && st) {
+                ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm';
+                st.innerHTML = '서버 주소 미입력 (오프라인 모드)';
+                st.className = 'text-[11px] text-red-500 font-bold tracking-wide flex items-center';
+            }
+            if(typeof window.renderAll === 'function') window.renderAll();
+            return;
+        }
+
+        let result;
+        try {
+            const res = await fetch(GAS_WEB_APP_URL + '?roomId=MAIN_DB');
+            result = await res.json();
+        } catch(networkErr) { 
+            console.error("클라우드 통신 실패:", networkErr);
+            if (ind && st) {
+                ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm';
+                st.innerHTML = '서버 연결 실패 (네트워크/URL 문제)';
+                st.className = 'text-[11px] text-red-500 font-bold tracking-wide flex items-center';
+            }
+            return; 
+        }
+
+        try {
+            if (result && result.status === "success" && result.data) {
+                const data = result.data;
+                
+                if (data.characters) window.charactersData = JSON.parse(data.characters);
+                if (data.cpm) window.cpmData = JSON.parse(data.cpm);
+                
+                if (data.party) {
+                    let parsedParty = JSON.parse(data.party);
+                    window.partyData = Array.isArray(parsedParty) ? parsedParty : [];
+                } else {
+                    window.partyData = [];
+                }
+                
+                if (data.oreha) {
+                    let parsed = JSON.parse(data.oreha);
+                    if (parsed.inv && parsed.inv.tradable) {
+                        window.oState = { craftType: parsed.craftType || 'normal', inv: parsed.inv.tradable, prices: window.oState.prices };
+                    } else {
+                        window.oState = parsed;
+                        if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0};
+                    }
+                }
+                if (data.lastWeeklyResetId) window.lastWeeklyResetId = data.lastWeeklyResetId;
+
+                // 데이터 구조 안정화
+                window.charactersData.forEach(c => { c.completed = c.completed || []; });
+                window.partyData.forEach(p => { p.slots = p.slots || [null, null, null, null]; });
+
+                if (!window.hasCheckedWeeklyReset && window.charactersData.length > 0) {
+                    window.hasCheckedWeeklyReset = true;
+                    checkAndRunWeeklyReset();
+                }
+            } 
+            
+            isInitialLoad = false;
+            isCloudConnected = true;
+            
+            if (ind && st) {
+                ind.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm';
+                st.innerHTML = '연동 완료 <span class="text-slate-500 ml-1.5 font-normal text-[10px] border border-blue-200 px-1.5 py-0.5 rounded bg-blue-50">동기화 중</span>';
+                st.className = 'text-[11px] text-blue-600 font-bold tracking-wide flex items-center';
+            }
+        } catch(parseErr) {
+            console.error("데이터 파싱/렌더링 에러:", parseErr);
+            if (ind && st) {
+                ind.className = 'w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm';
+                st.innerHTML = '데이터 처리 중 오류 발생';
+                st.className = 'text-[11px] text-orange-600 font-bold tracking-wide flex items-center';
+            }
+        }
+        
+        if(typeof window.renderAll === 'function') window.renderAll();
+    }
+
+    let saveTimeout = null;
+    window.saveToCloud = function() {
+        if (!isCloudConnected) return;
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(async () => {
+            const payload = {
+                roomId: "MAIN_DB",
+                data: {
+                    characters: JSON.stringify(window.charactersData),
+                    cpm: JSON.stringify(window.cpmData),
+                    party: JSON.stringify(window.partyData),
+                    oreha: JSON.stringify(window.oState),
+                    lastWeeklyResetId: window.lastWeeklyResetId || ''
+                }
+            };
+            try { await fetch(GAS_WEB_APP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload), redirect: "follow" }); } catch(e) {}
+        }, 500);
     };
 
     window.checkAndRunWeeklyReset = function() {
@@ -391,13 +523,20 @@
 
         for (let player in groupedByPlayer) groupedByPlayer[player].sort((a, b) => b.level - a.level);
 
-        for (const [player, chars] of Object.entries(groupedByPlayer)) {
+        const allHtml = Object.entries(groupedByPlayer).map(([player, chars]) => {
             const pColor = getPlayerColor(player);
             const isExpanded = window.summaryStates[player] === true; 
             
-            let html = '<div class="glass-panel border-t-4 ' + pColor.border + ' p-3 md:p-4 bg-white"><h2 class="text-base md:text-lg font-black mb-2.5 ' + pColor.text + ' border-b border-slate-100 pb-1.5 flex justify-between items-center"><span>' + player + '</span><button onclick="toggleSummary(\'' + player + '\')" class="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 shadow-sm">요약보기 ' + (isExpanded ? '▲' : '▼') + '</button></h2>';
+            let html = '<div class="glass-panel border-t-4 ' + pColor.border + ' p-3 md:p-4 bg-white">';
+            html += '<h2 class="text-base md:text-lg font-black mb-2.5 ' + pColor.text + ' border-b border-slate-100 pb-1.5 flex justify-between items-center">';
+            html += '<span>' + player + '</span>';
+            html += '<button onclick="toggleSummary(\'' + player + '\')" class="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 shadow-sm">';
+            html += '요약보기 ' + (isExpanded ? '▲' : '▼') + '</button></h2>';
             
-            let summaryHtml = '<div id="summary-' + player + '" class="' + (isExpanded ? 'block' : 'hidden') + '"><div class="bg-slate-50 rounded-lg p-2.5 mb-3 border border-slate-200 text-xs shadow-sm"><div class="font-bold text-slate-600 mb-1.5 border-b border-slate-200 pb-1 flex items-center gap-1.5"><span class="text-[10px]">📋</span> 주간 숙제 요약</div><div class="space-y-1.5">';
+            let summaryHtml = '<div id="summary-' + player + '" class="' + (isExpanded ? 'block' : 'hidden') + '">';
+            summaryHtml += '<div class="bg-slate-50 rounded-lg p-2.5 mb-3 border border-slate-200 text-xs shadow-sm">';
+            summaryHtml += '<div class="font-bold text-slate-600 mb-1.5 border-b border-slate-200 pb-1 flex items-center gap-1.5"><span class="text-[10px]">📋</span> 주간 숙제 요약</div>';
+            summaryHtml += '<div class="space-y-1.5">';
             let hasAnySummary = false;
             
             const getSummaryStyleInfo = (diffName) => {
@@ -437,7 +576,6 @@
                         
                         let boxClass = 'col-start-' + style.col + ' flex items-center justify-between gap-1 px-1.5 py-0.5 rounded border border-slate-200 w-full max-w-[90px] cursor-help transition-all';
                         let badgeClass = style.color + ' font-bold text-[10px] ' + style.bg + ' px-1 rounded whitespace-nowrap';
-                        
                         let remainingClass = "text-slate-800 font-black text-[12px]";
                         let totalClass = "text-slate-400 font-medium text-[9px]";
                         
@@ -449,14 +587,19 @@
                         } else { boxClass += " bg-white shadow-sm"; }
                         
                         let tooltipData = 'data-assigned="' + assignedNames.join(', ') + '" data-remaining="' + remainingNames.join(', ') + '"';
-                        catParts.push('<div onmouseenter="showTooltip(event, this)" onmouseleave="hideTooltip()" ' + tooltipData + ' class="' + boxClass + '"><span class="' + badgeClass + '">' + diffName + '</span><div class="flex items-baseline gap-0.5 whitespace-nowrap"><span class="' + remainingClass + '">' + totalRemaining + '</span><span class="' + totalClass + '">/' + totalAssigned + '</span></div></div>');
+                        let partHtml = '<div onmouseenter="showTooltip(event, this)" onmouseleave="hideTooltip()" ' + tooltipData + ' class="' + boxClass + '">';
+                        partHtml += '<span class="' + badgeClass + '">' + diffName + '</span>';
+                        partHtml += '<div class="flex items-baseline gap-0.5 whitespace-nowrap"><span class="' + remainingClass + '">' + totalRemaining + '</span><span class="' + totalClass + '">/' + totalAssigned + '</span></div></div>';
+                        catParts.push(partHtml);
                     }
                 });
                 
                 if (catParts.length > 0) {
                     hasAnySummary = true;
                     let displayLabel = cat.label === '벨가르딘' ? '벨가' : cat.label;
-                    summaryHtml += '<div class="flex items-center gap-2 border-b border-slate-200 last:border-0 pb-1.5 last:pb-0"><span class="text-slate-600 font-bold w-9 shrink-0 text-center bg-slate-200 rounded py-0.5 text-[11px]">' + displayLabel + '</span><div class="grid grid-cols-3 gap-x-2 gap-y-1 items-center flex-1">' + catParts.join('') + '</div></div>';
+                    summaryHtml += '<div class="flex items-center gap-2 border-b border-slate-200 last:border-0 pb-1.5 last:pb-0">';
+                    summaryHtml += '<span class="text-slate-600 font-bold w-9 shrink-0 text-center bg-slate-200 rounded py-0.5 text-[11px]">' + displayLabel + '</span>';
+                    summaryHtml += '<div class="grid grid-cols-3 gap-x-2 gap-y-1 items-center flex-1">' + catParts.join('') + '</div></div>';
                 }
             });
             summaryHtml += '</div></div></div>';
@@ -464,41 +607,52 @@
 
             html += '<div class="flex flex-col gap-1.5">'; 
             chars.forEach(char => {
-                const contentsHtml = '<div class="grid grid-cols-5 gap-1 md:gap-1.5 w-full sm:w-[280px] md:w-[380px] shrink-0 sm:ml-auto">' + dungeonCategories.map(cat => {
+                let contentsHtml = '<div class="grid grid-cols-5 gap-1 md:gap-1.5 w-full sm:w-[280px] md:w-[380px] shrink-0 sm:ml-auto">';
+                contentsHtml += dungeonCategories.map(cat => {
                     const c = cat.diffs.find(diff => char.contents && char.contents.includes(diff));
                     if (c) {
                         const isCompleted = window.isCharClearedDungeon(char, c);
-                        return '<span onclick="toggleCompletion(\'' + char.dbId + '\', \'' + c + '\')" class="dungeon-badge w-full !m-0 h-full text-[9px] md:text-[11px] px-0.5 py-1 md:py-1.5 rounded font-medium tracking-tighter ' + getDiffStyle(c) + ' ' + (isCompleted ? 'completed' : '') + '">' + c + '</span>';
+                        const cls = 'dungeon-badge w-full !m-0 h-full text-[9px] md:text-[11px] px-0.5 py-1 md:py-1.5 rounded font-medium tracking-tighter ' + getDiffStyle(c) + ' ' + (isCompleted ? 'completed' : '');
+                        return '<span onclick="toggleCompletion(\'' + char.dbId + '\', \'' + c + '\')" class="' + cls + '">' + c + '</span>';
                     }
                     return '<span></span>';
-                }).join('') + '</div>';
+                }).join('');
+                contentsHtml += '</div>';
                 
                 const isSupp = supporters.includes(char.name);
                 const cardClass = isSupp ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200 hover:bg-slate-50';
 
-                html += '<div class="rounded-lg p-2 md:p-2.5 border flex flex-col sm:flex-row sm:items-center justify-between transition gap-1.5 shadow-sm ' + cardClass + '"><div class="flex items-center gap-1.5 whitespace-nowrap min-w-max"><span class="font-bold text-sm text-slate-800">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-xs">✨</span>' : '') + char.name + '</span><span class="text-[11px] md:text-xs text-slate-500 font-medium">Lv.' + char.level + '</span></div>' + contentsHtml + '</div>';
+                html += '<div class="rounded-lg p-2 md:p-2.5 border flex flex-col sm:flex-row sm:items-center justify-between transition gap-1.5 shadow-sm ' + cardClass + '">';
+                html += '<div class="flex items-center gap-1.5 whitespace-nowrap min-w-max">';
+                html += '<span class="font-bold text-sm text-slate-800">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-xs">✨</span>' : '') + char.name + '</span>';
+                html += '<span class="text-[11px] md:text-xs text-slate-500 font-medium">Lv.' + char.level + '</span></div>';
+                html += contentsHtml + '</div>';
             });
             html += '</div></div>';
-            container.innerHTML += html;
-        }
+            return html;
+        }).join('');
+        container.innerHTML = allHtml;
     }
 
     function renderPartyDashboard(container) {
-        container.className = "flex flex-col gap-4 h-full overflow-hidden";
+        container.className = "flex flex-col gap-4 h-full";
         
-        // Filter Buttons properly formatted to prevent syntax errors
-        let filterButtons = partyDungeonCategories.map(cat => {
+        let filterHtml = '<div class="glass-panel p-3 flex flex-wrap gap-2 items-center shadow-sm bg-white mb-2">';
+        filterHtml += '<span class="text-xs font-bold text-slate-500 mr-1">🔍 보드 필터:</span>';
+        
+        partyDungeonCategories.forEach(cat => {
             const isActive = window.partyBoardFilters.has(cat.id);
-            const btnClass = isActive ? "bg-slate-600 text-white border-transparent" : "bg-white border-slate-300 text-slate-500 hover:bg-slate-100";
-            return '<button onclick="togglePartyBoardFilter(\'' + cat.id + '\')" class="px-3 py-1 rounded-full text-xs font-bold border transition ' + btnClass + '">' + cat.name + '</button>';
-        }).join('');
-
-        let filterHtml = '<div class="glass-panel p-3 flex flex-wrap gap-2 items-center shadow-sm bg-white"><span class="text-xs font-bold text-slate-500 mr-1">🔍 보드 필터:</span>' + filterButtons + '</div>';
+            const btnClass = isActive ? 'bg-slate-600 text-white border-transparent' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-100';
+            filterHtml += '<button onclick="togglePartyBoardFilter(\'' + cat.id + '\')" class="px-3 py-1 rounded-full text-xs font-bold border transition ' + btnClass + '">' + cat.name + '</button>';
+        });
+        filterHtml += '</div>';
         
-        let mainContent = '<div class="flex flex-col lg:flex-row gap-4 h-full">';
+        let mainContent = '<div class="flex flex-col lg:flex-row gap-4 overflow-hidden h-full">';
 
-        // 1. 좌측 얇은 명단 패널
-        let rosterHtml = '<div class="lg:w-48 shrink-0 flex flex-col"><div class="glass-panel p-3 sticky top-4 max-h-[85vh] overflow-y-auto"><h3 class="text-[11px] font-bold text-slate-500 mb-2 border-b border-slate-200 pb-2 text-center">👥 명단 (드래그)</h3><div id="roster-container" class="space-y-3">';
+        // 좌측 로스터 패널
+        let rosterHtml = '<div class="lg:w-48 shrink-0 flex flex-col"><div class="glass-panel p-3 sticky top-4 max-h-[85vh] overflow-y-auto">';
+        rosterHtml += '<h3 class="text-[11px] font-bold text-slate-500 mb-2 border-b border-slate-200 pb-2 text-center">👥 명단 (드래그)</h3>';
+        rosterHtml += '<div id="roster-container" class="space-y-3">';
         
         const grouped = window.charactersData.reduce((acc, char) => {
             if (!acc[char.player]) acc[char.player] = [];
@@ -514,23 +668,35 @@
             grouped[player].forEach(char => {
                 const isSupp = supporters.includes(char.name);
                 const borderClass = isSupp ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200';
-                rosterHtml += '<div draggable="true" ondragstart="dragStart(event, \'' + char.dbId + '\')" class="flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition bg-white ' + borderClass + '"><span class="text-[11px] font-bold text-slate-700">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span><span class="text-[9px] text-slate-400 font-medium">' + char.level + '</span></div>';
+                rosterHtml += '<div draggable="true" ondragstart="dragStart(event, \'' + char.dbId + '\')" class="flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition bg-white ' + borderClass + '">';
+                rosterHtml += '<span class="text-[11px] font-bold text-slate-700">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span>';
+                rosterHtml += '<span class="text-[9px] text-slate-400 font-medium">' + char.level + '</span></div>';
             });
             rosterHtml += '</div></div>';
         }
         rosterHtml += '</div></div></div>';
 
-        // 2. 우측 칸반 보드 패널
-        let boardHtml = '<div class="flex-grow flex gap-4 overflow-x-auto pb-4 items-start h-full">';
+        // 우측 칸반 보드 패널
+        let boardHtml = '<div class="flex-grow flex gap-4 overflow-x-auto pb-4 items-start">';
         
         partyDungeonCategories.filter(cat => window.partyBoardFilters.has(cat.id)).forEach(cat => {
-            boardHtml += '<div class="w-[280px] shrink-0 flex flex-col gap-3"><div class="bg-slate-200/60 py-2 text-center font-black text-slate-700 rounded-lg shadow-sm border border-slate-200">' + cat.name + '</div><div class="flex flex-col gap-3 min-h-[50px]">';
+            boardHtml += '<div class="w-[280px] shrink-0 flex flex-col gap-3">';
+            boardHtml += '<div class="bg-slate-200/60 py-2 text-center font-black text-slate-700 rounded-lg shadow-sm border border-slate-200">' + cat.name + '</div>';
+            boardHtml += '<div class="flex flex-col gap-3 min-h-[50px]">';
             
             const catParties = window.partyData.filter(p => p.cat === cat.id);
             catParties.forEach(pData => {
                 const diffInfo = cat.diffs.find(d => d.name === pData.diff) || {color: 'bg-slate-100 text-slate-700 border-slate-300', level: pData.level};
+                const completedCls = pData.isCleared ? 'party-completed' : '';
+                const checkedAttr = pData.isCleared ? 'checked' : '';
                 
-                boardHtml += '<div class="glass-panel p-3 transition-all relative group ' + (pData.isCleared ? 'party-completed' : '') + '"><button onclick="deleteParty(\'' + pData.id + '\')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs z-10" title="파티 삭제">❌</button><div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2 pr-4"><div class="flex items-center gap-1.5"><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ' + diffInfo.color + '">' + pData.diff + '</span></div><div class="flex items-center gap-2"><span class="text-[10px] text-slate-400 font-bold">Lv.' + pData.level + '</span><label class="flex items-center cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + (pData.isCleared ? 'checked' : '') + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label></div></div><div class="grid grid-cols-1 gap-1.5">';
+                boardHtml += '<div class="glass-panel p-3 transition-all relative group ' + completedCls + '">';
+                boardHtml += '<button onclick="deleteParty(\'' + pData.id + '\')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs z-10" title="파티 삭제">❌</button>';
+                boardHtml += '<div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2 pr-4"><div class="flex items-center gap-1.5">';
+                boardHtml += '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded ' + diffInfo.color + '">' + pData.diff + '</span></div>';
+                boardHtml += '<div class="flex items-center gap-2"><span class="text-[10px] text-slate-400 font-bold">Lv.' + pData.level + '</span>';
+                boardHtml += '<label class="flex items-center cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + checkedAttr + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label></div></div>';
+                boardHtml += '<div class="grid grid-cols-1 gap-1.5">';
                 
                 for (let i = 0; i < 4; i++) {
                     const slotCharId = pData.slots[i];
@@ -539,7 +705,11 @@
                         if (char) {
                             const pColor = getPlayerColor(char.player);
                             const isSupp = supporters.includes(char.name);
-                            boardHtml += '<div class="flex items-center justify-between p-2 rounded border border-slate-200 bg-white shadow-sm"><div class="flex items-center gap-1.5"><span class="text-[9px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1 py-0.5 rounded">' + char.player + '</span><span class="text-[11px] font-bold text-slate-700">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span></div><div class="flex items-center gap-1"><span class="text-[9px] text-slate-400">' + char.level + '</span><button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-300 hover:text-red-500 font-bold transition px-1 text-[10px]">✕</button></div></div>';
+                            boardHtml += '<div class="flex items-center justify-between p-2 rounded border border-slate-200 bg-white shadow-sm"><div class="flex items-center gap-1.5">';
+                            boardHtml += '<span class="text-[9px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1 py-0.5 rounded">' + char.player + '</span>';
+                            boardHtml += '<span class="text-[11px] font-bold text-slate-700">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span></div>';
+                            boardHtml += '<div class="flex items-center gap-1"><span class="text-[9px] text-slate-400">' + char.level + '</span>';
+                            boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-300 hover:text-red-500 font-bold transition px-1 text-[10px]">✕</button></div></div>';
                         } else {
                             pData.slots[i] = null;
                             i--;
@@ -551,21 +721,19 @@
                 boardHtml += '</div></div>';
             });
 
-            // 난이도별 파티 추가 버튼을 문자열 결합 방식으로 생성
-            let diffButtons = cat.diffs.map(d => {
-                return '<button onclick="addParty(\'' + cat.id + '\', \'' + d.name + '\', ' + d.level + ')" class="px-2 py-1 text-[10px] font-bold rounded cursor-pointer ' + d.color + ' hover:brightness-95 shadow-sm transition">' + d.name + '</button>';
-            }).join('');
+            // 문법 오류(SyntaxError)를 100% 차단하는 안전한 조립 방식 적용
+            let diffButtons = '';
+            cat.diffs.forEach(d => {
+                diffButtons += '<button onclick="addParty(\'' + cat.id + '\', \'' + d.name + '\', ' + d.level + ')" class="px-2 py-1 text-[10px] font-bold rounded ' + d.color + ' hover:brightness-95 shadow-sm transition">' + d.name + '</button>';
+            });
             
-            // 호버가 끊기지 않도록 투명한 패딩을 포함한 드롭다운 래퍼 적용 (pb-1.5)
-            boardHtml += '</div>' + 
-                         '<div class="group relative w-full mt-1">' +
-                             '<button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition cursor-pointer">+ 파티 추가</button>' +
-                             '<div class="hidden group-hover:flex absolute bottom-full left-0 w-full pb-1.5 z-20 cursor-default">' +
-                                 '<div class="bg-white border border-slate-200 shadow-xl rounded-lg p-2 gap-1.5 flex flex-wrap justify-center w-full">' +
-                                     diffButtons +
-                                 '</div>' +
-                             '</div>' +
-                         '</div></div>';
+            boardHtml += '</div>';
+            boardHtml += '<div class="group relative w-full mt-1">';
+            boardHtml += '<button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition">+ 파티 추가</button>';
+            // 투명 패딩(pb-1) 적용하여 호버 인식이 안 풀리도록 수정
+            boardHtml += '<div class="hidden group-hover:flex absolute bottom-full left-0 w-full pb-1 z-20"><div class="bg-white border border-slate-200 shadow-xl rounded-lg p-2 gap-1.5 flex-wrap justify-center flex w-full">';
+            boardHtml += diffButtons;
+            boardHtml += '</div></div></div></div>';
         });
         
         boardHtml += '</div>';
@@ -682,13 +850,13 @@
     window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
     document.addEventListener('click', (e) => { if (!e.target.closest('#dropdown-menu')) closeDropdown(); });
 
-    let selectedCategories = new Set();
     window.toggleFilter = function(categoryId) {
         if (selectedCategories.has(categoryId)) selectedCategories.delete(categoryId);
         else selectedCategories.add(categoryId);
         renderFilterResults();
     }
 
+    let selectedCategories = new Set();
     function renderFilters() {
         const container = document.getElementById('filter-checkboxes');
         container.innerHTML = '';
@@ -806,7 +974,13 @@
                 const sortedContents = (char.contents || []).sort((a, b) => globalDungeonOrder.indexOf(a) - globalDungeonOrder.indexOf(b));
                 let rowBorder = cIndex === 0 ? 'border-t-[3px] ' + pColor.border : 'border-t border-slate-100'; 
 
-                tbody.innerHTML += '<tr class="hover:bg-slate-50 transition ' + rowBorder + '"><td class="px-3 py-2 font-bold ' + pColor.text + '">' + (cIndex === 0 ? char.player : '') + '</td><td class="px-3 py-2 text-slate-800 font-bold">' + (supporters.includes(char.name) ? '✨ ' : '') + char.name + '</td><td class="px-3 py-2 text-slate-500">' + char.level + '</td><td class="px-3 py-2 text-[10px] text-slate-400 whitespace-normal min-w-[150px] leading-tight">' + sortedContents.join(', ') + '</td><td class="px-3 py-2 text-center flex gap-1 justify-center"><button onclick="startEdit(\'' + char.dbId + '\')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition">수정</button><button onclick="requestDelete(\'' + char.dbId + '\', this)" class="text-red-500 bg-red-50 hover:bg-red-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition">삭제</button></td></tr>';
+                let rowHtml = '<tr class="hover:bg-slate-50 transition ' + rowBorder + '">';
+                rowHtml += '<td class="px-3 py-2 font-bold ' + pColor.text + '">' + (cIndex === 0 ? char.player : '') + '</td>';
+                rowHtml += '<td class="px-3 py-2 text-slate-800 font-bold">' + (supporters.includes(char.name) ? '✨ ' : '') + char.name + '</td>';
+                rowHtml += '<td class="px-3 py-2 text-slate-500">' + char.level + '</td>';
+                rowHtml += '<td class="px-3 py-2 text-[10px] text-slate-400 whitespace-normal min-w-[150px] leading-tight">' + sortedContents.join(', ') + '</td>';
+                rowHtml += '<td class="px-3 py-2 text-center flex gap-1 justify-center"><button onclick="startEdit(\'' + char.dbId + '\')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition">수정</button><button onclick="requestDelete(\'' + char.dbId + '\', this)" class="text-red-500 bg-red-50 hover:bg-red-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition">삭제</button></td></tr>';
+                tbody.innerHTML += rowHtml;
             });
         });
     }
@@ -823,16 +997,14 @@
         if (window.editingDbId) {
             const existingChar = window.charactersData.find(c => c.dbId === window.editingDbId);
             existingChar.player = player; existingChar.name = name; existingChar.level = level; existingChar.contents = autoContents;
-            cancelEdit(); 
-            showToast('캐릭터 정보가 수정되었습니다.');
+            cancelEdit(); showToast('캐릭터 정보가 수정되었습니다.');
         } else {
             const newId = 'char_' + Date.now().toString();
             window.charactersData.push({ dbId: newId, player, name, level, contents: autoContents, completed: [], timestamp: Date.now() });
             document.getElementById('add-char-form').reset();
             showToast('새 캐릭터가 등록되었습니다.');
         }
-        window.saveToCloud(); 
-        renderAll();
+        window.saveToCloud(); renderAll();
     };
 
     window.startEdit = function(dbId) {
@@ -864,34 +1036,23 @@
             }
             window.saveToCloud(); renderAll(); showToast('캐릭터가 삭제되었습니다.', 'warning');
         } else {
-            btnElement.innerText = "정말?";
-            btnElement.className = "text-white bg-red-600 px-2 py-1 rounded text-[10px] font-bold transition";
+            btnElement.innerText = "정말?"; btnElement.className = "text-white bg-red-600 px-2 py-1 rounded text-[10px] font-bold transition";
             setTimeout(() => {
-                if (btnElement && btnElement.innerText === "정말?") {
-                    btnElement.innerText = "삭제";
-                    btnElement.className = "text-red-500 bg-red-50 hover:bg-red-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition";
-                }
+                if (btnElement && btnElement.innerText === "정말?") { btnElement.innerText = "삭제"; btnElement.className = "text-red-500 bg-red-50 hover:bg-red-600 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition"; }
             }, 3000);
         }
     };
 
     window.requestReset = function(btnElement) {
         if (btnElement.innerText === "확인") {
-            window.charactersData = [];
-            window.cpmData = { inputs: {}, records: [] };
-            window.partyData = [];
+            window.charactersData = []; window.cpmData = { inputs: {}, records: [] }; window.partyData = [];
             window.saveToCloud(); renderAll();
-            btnElement.innerText = "데이터 완전 초기화";
-            btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
+            btnElement.innerText = "데이터 완전 초기화"; btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
             showToast('모든 데이터가 초기화되었습니다.');
         } else {
-            btnElement.innerText = "확인";
-            btnElement.className = "text-[11px] bg-red-600 text-white px-3 py-1.5 rounded transition font-bold shadow-sm";
+            btnElement.innerText = "확인"; btnElement.className = "text-[11px] bg-red-600 text-white px-3 py-1.5 rounded transition font-bold shadow-sm";
             setTimeout(() => {
-                if (btnElement.innerText === "확인") {
-                    btnElement.innerText = "데이터 완전 초기화";
-                    btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
-                }
+                if (btnElement.innerText === "확인") { btnElement.innerText = "데이터 완전 초기화"; btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm"; }
             }, 3500);
         }
     };
@@ -923,25 +1084,18 @@
 
         if ((min === 0 && sec === 0) || casts === 0) { showToast('전투 시간과 시전 횟수를 정확히 입력해주세요.', 'warning'); return; }
 
-        const totalOriginalSec = (min * 60) + sec;
-        const totalSec = totalOriginalSec - exclude;
-
+        const totalOriginalSec = (min * 60) + sec; const totalSec = totalOriginalSec - exclude;
         if (totalSec <= 0) { showToast('제외 시간이 전투 시간보다 길거나 같습니다.', 'warning'); return; }
 
-        const cpm = (casts * 60) / totalSec;
-        const interval = totalSec / casts;
-        const castsPer30s = cpm / 2;
-        const impact = 60 / totalSec;
+        const cpm = (casts * 60) / totalSec; const interval = totalSec / casts;
+        const castsPer30s = cpm / 2; const impact = 60 / totalSec;
 
-        document.getElementById('res-current-cpm').innerText = cpm.toFixed(2);
-        document.getElementById('res-interval').innerText = interval.toFixed(2);
-
+        document.getElementById('res-current-cpm').innerText = cpm.toFixed(2); document.getElementById('res-interval').innerText = interval.toFixed(2);
         let timeStr = min + '분 ' + sec + '초';
         if (exclude > 0) timeStr += ' (총 ' + totalOriginalSec + '초 - 보정 ' + exclude + '초 = ' + totalSec + '초)';
         else timeStr += ' (' + totalSec + '초)';
         
-        document.getElementById('res-time-str').innerText = timeStr;
-        document.getElementById('res-casts').innerText = casts + '회';
+        document.getElementById('res-time-str').innerText = timeStr; document.getElementById('res-casts').innerText = casts + '회';
         document.getElementById('res-formula').innerText = casts + ' × 60 ÷ ' + totalSec + ' = ' + cpm.toFixed(2);
         document.getElementById('res-30s').innerText = '약 ' + castsPer30s.toFixed(2) + '회';
         document.getElementById('res-interval-text').innerText = '약 ' + interval.toFixed(2) + '초마다 1회';
@@ -955,9 +1109,7 @@
         const rowTargetRate = document.getElementById('row-target-rate');
 
         if (target > 0) {
-            const requiredCasts = Math.ceil((target * totalSec) / 60);
-            const realAchievementRate = (cpm / target) * 100;
-            
+            const requiredCasts = Math.ceil((target * totalSec) / 60); const realAchievementRate = (cpm / target) * 100;
             let barColorClass = ""; let textColorClass = "";
             if (realAchievementRate <= 30) { barColorClass = "bg-red-500 shadow-sm"; textColorClass = "text-red-500"; }
             else if (realAchievementRate <= 70) { barColorClass = "bg-blue-500 shadow-sm"; textColorClass = "text-blue-500"; }
@@ -972,17 +1124,11 @@
             document.getElementById('res-target-percent-text').className = 'text-[13px] font-bold ' + textColorClass;
             
             const msgEl = document.getElementById('res-target-msg');
-            if(casts >= requiredCasts) {
-                msgEl.innerHTML = '<span class="text-slate-700">설정한 목표 CPM을 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>';
-                badgeSuccess.classList.remove('hidden');
-            } else {
-                msgEl.innerText = '목표 달성까지 ' + (requiredCasts - casts) + '회 부족합니다.';
-                badgeSuccess.classList.add('hidden');
-            }
+            if(casts >= requiredCasts) { msgEl.innerHTML = '<span class="text-slate-700">설정한 목표 CPM을 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>'; badgeSuccess.classList.remove('hidden'); }
+            else { msgEl.innerText = '목표 달성까지 ' + (requiredCasts - casts) + '회 부족합니다.'; badgeSuccess.classList.add('hidden'); }
             targetSection.classList.remove('hidden');
 
-            document.getElementById('res-target-val').innerText = target;
-            document.getElementById('res-target-min-casts').innerText = requiredCasts + '회';
+            document.getElementById('res-target-val').innerText = target; document.getElementById('res-target-min-casts').innerText = requiredCasts + '회';
             
             const extraEl = document.getElementById('res-target-extra');
             if(casts >= requiredCasts) { extraEl.innerText = "추가 시전 없이 목표 달성"; extraEl.className = "text-slate-700"; }
@@ -999,125 +1145,88 @@
             rowTargetExtra.classList.add('hidden'); rowTargetRate.classList.add('hidden');
         }
 
-        const rowScarecrow = document.getElementById('row-scarecrow');
-        const rowEfficiency = document.getElementById('row-efficiency');
+        const rowScarecrow = document.getElementById('row-scarecrow'); const rowEfficiency = document.getElementById('row-efficiency');
         if (scarecrow > 0) {
             const efficiency = (cpm / scarecrow) * 100;
-            document.getElementById('res-scarecrow-cpm').innerText = scarecrow.toFixed(2);
-            document.getElementById('res-efficiency').innerText = efficiency.toFixed(1) + '%';
+            document.getElementById('res-scarecrow-cpm').innerText = scarecrow.toFixed(2); document.getElementById('res-efficiency').innerText = efficiency.toFixed(1) + '%';
             rowScarecrow.classList.remove('hidden'); rowEfficiency.classList.remove('hidden');
-        } else {
-            rowScarecrow.classList.add('hidden'); rowEfficiency.classList.add('hidden');
-        }
+        } else { rowScarecrow.classList.add('hidden'); rowEfficiency.classList.add('hidden'); }
 
-        const tbody = document.getElementById('res-variance-body');
-        tbody.innerHTML = '';
+        const tbody = document.getElementById('res-variance-body'); tbody.innerHTML = '';
         for (let i = -2; i <= 2; i++) {
-            const vCasts = casts + i;
-            if (vCasts <= 0) continue;
+            const vCasts = casts + i; if (vCasts <= 0) continue;
             const vCpm = (vCasts * 60) / totalSec;
-            let label = i > 0 ? '+' + i + '회' : i + '회';
-            let trClass = "border-b border-slate-200 last:border-0";
-            let valClass = "";
+            let label = i > 0 ? '+' + i + '회' : i + '회'; let trClass = "border-b border-slate-200 last:border-0"; let valClass = "";
             if (i === 0) { label = "현재"; trClass = "bg-blue-50 font-bold border-b border-slate-200"; valClass = "text-blue-600"; }
-            else if (i < 0) { valClass = "text-red-500"; }
-            else { valClass = "text-green-600"; }
-
+            else if (i < 0) { valClass = "text-red-500"; } else { valClass = "text-green-600"; }
             tbody.innerHTML += '<tr class="' + trClass + '"><td class="py-2 ' + valClass + '">' + label + '</td><td class="py-2">' + vCasts + '회</td><td class="py-2">' + (i===0 ? '-' : vCpm.toFixed(2)) + '</td></tr>';
         }
         document.getElementById('cpm-result-area').classList.remove('hidden');
     };
 
     window.resetCpmForm = function() {
-        document.getElementById('cpm-record-name').value = ''; document.getElementById('cpm-skill-name').value = '';
-        document.getElementById('cpm-min').value = ''; document.getElementById('cpm-sec').value = '';
-        document.getElementById('cpm-casts').value = ''; document.getElementById('cpm-target').value = '';
-        document.getElementById('cpm-scarecrow').value = ''; document.getElementById('cpm-exclude').value = '0';
-        document.getElementById('cpm-result-area').classList.add('hidden');
-        window.editingCpmId = null;
-        const btnSave = document.getElementById('btn-cpm-save');
-        if (btnSave) { btnSave.innerHTML = '💾 현재 결과 클라우드에 저장'; btnSave.className = 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm'; }
-        const btnCancel = document.getElementById('btn-cpm-cancel');
-        if (btnCancel) btnCancel.classList.add('hidden');
+        document.getElementById('cpm-record-name').value = ''; document.getElementById('cpm-skill-name').value = ''; document.getElementById('cpm-min').value = ''; document.getElementById('cpm-sec').value = '';
+        document.getElementById('cpm-casts').value = ''; document.getElementById('cpm-target').value = ''; document.getElementById('cpm-scarecrow').value = ''; document.getElementById('cpm-exclude').value = '0';
+        document.getElementById('cpm-result-area').classList.add('hidden'); window.editingCpmId = null;
+        const btnSave = document.getElementById('btn-cpm-save'); if (btnSave) { btnSave.innerHTML = '💾 현재 결과 클라우드에 저장'; btnSave.className = 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm'; }
+        const btnCancel = document.getElementById('btn-cpm-cancel'); if (btnCancel) btnCancel.classList.add('hidden');
     };
 
     window.saveCpmRecord = function() {
-        const min = parseInt(document.getElementById('cpm-min').value) || 0;
-        const sec = parseInt(document.getElementById('cpm-sec').value) || 0;
-        const casts = parseInt(document.getElementById('cpm-casts').value) || 0;
-        const target = document.getElementById('cpm-target').value;
-        const scarecrow = document.getElementById('cpm-scarecrow').value;
-        const exclude = parseInt(document.getElementById('cpm-exclude').value) || 0;
-        let rName = document.getElementById('cpm-record-name').value.trim();
-        let sName = document.getElementById('cpm-skill-name').value.trim();
+        const min = parseInt(document.getElementById('cpm-min').value) || 0; const sec = parseInt(document.getElementById('cpm-sec').value) || 0; const casts = parseInt(document.getElementById('cpm-casts').value) || 0;
+        const target = document.getElementById('cpm-target').value; const scarecrow = document.getElementById('cpm-scarecrow').value; const exclude = parseInt(document.getElementById('cpm-exclude').value) || 0;
+        let rName = document.getElementById('cpm-record-name').value.trim(); let sName = document.getElementById('cpm-skill-name').value.trim();
         
         if ((min === 0 && sec === 0) || casts === 0) { showToast('전투 시간과 시전 횟수를 정확히 입력한 후 저장해주세요.', 'warning'); return; }
-
-        const totalSec = (min * 60) + sec - exclude;
-        if (totalSec <= 0) return;
-
+        const totalSec = (min * 60) + sec - exclude; if (totalSec <= 0) return;
         const cpm = (casts * 60) / totalSec;
         if (!rName) { const d = new Date(); rName = (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ' 기록'; }
 
         if (window.editingCpmId) {
             const idx = window.cpmData.records.findIndex(r => r.id === window.editingCpmId);
-            if (idx > -1) {
-                window.cpmData.records[idx] = { ...window.cpmData.records[idx], recordName: rName, skillName: sName, min, sec, casts, target, scarecrow, exclude, cpm: cpm.toFixed(2) };
-                showToast('\'' + rName + '\' 기록이 수정되었습니다.');
-            }
+            if (idx > -1) { window.cpmData.records[idx] = { ...window.cpmData.records[idx], recordName: rName, skillName: sName, min, sec, casts, target, scarecrow, exclude, cpm: cpm.toFixed(2) }; showToast('\'' + rName + '\' 기록이 수정되었습니다.'); }
             resetCpmForm();
         } else {
             const newRecord = { id: 'cpm_rec_' + Date.now(), recordName: rName, skillName: sName, min, sec, casts, target, scarecrow, exclude, cpm: cpm.toFixed(2), timestamp: Date.now() };
-            window.cpmData.records.unshift(newRecord);
-            showToast('\'' + rName + '\'(으)로 기록이 저장되었습니다.');
+            window.cpmData.records.unshift(newRecord); showToast('\'' + rName + '\'(으)로 기록이 저장되었습니다.');
         }
         window.saveToCloud(); renderCpmRecords();
     };
 
     function renderCpmRecords() {
-        const container = document.getElementById('cpm-records-container');
-        const countEl = document.getElementById('cpm-record-count');
-        if(!container) return;
-        countEl.innerText = window.cpmData.records.length + '개';
-        if (window.cpmData.records.length === 0) {
-            container.innerHTML = '<div class="flex flex-col items-center justify-center h-40 text-slate-400"><span class="text-3xl mb-2 opacity-60">📁</span><span class="text-xs">저장된 기록이 없습니다.</span></div>';
-            return;
-        }
+        const container = document.getElementById('cpm-records-container'); const countEl = document.getElementById('cpm-record-count');
+        if(!container) return; countEl.innerText = window.cpmData.records.length + '개';
+        if (window.cpmData.records.length === 0) { container.innerHTML = '<div class="flex flex-col items-center justify-center h-40 text-slate-400"><span class="text-3xl mb-2 opacity-60">📁</span><span class="text-xs">저장된 기록이 없습니다.</span></div>'; return; }
 
-        container.innerHTML = window.cpmData.records.map(r => '<div class="bg-white border border-slate-200 hover:border-blue-400 transition-colors p-3 rounded-lg cursor-pointer group relative shadow-sm" onclick="loadCpmRecord(\'' + r.id + '\')"><div class="flex justify-between items-start mb-2 pr-6"><div class="flex flex-col"><span class="text-xs font-bold text-slate-800 truncate max-w-[150px]" title="' + r.recordName + '">' + r.recordName + '</span>' + (r.skillName ? '<span class="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">' + r.skillName + '</span>' : '') + '</div><div class="text-right"><span class="text-sm font-black text-yellow-500 block leading-none">' + r.cpm + '</span><span class="text-[8px] text-slate-400">CPM</span></div></div><div class="flex items-center justify-between text-[10px] text-slate-500 bg-slate-50 rounded px-2 py-1.5 border border-slate-100"><span>⏱️ ' + r.min + '분 ' + r.sec + '초</span><span class="text-slate-300">|</span><span class="text-slate-600 font-bold">⚔️ ' + r.casts + '회</span></div><button onclick="deleteCpmRecord(event, \'' + r.id + '\', this)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs">❌</button></div>').join('');
+        let html = '';
+        window.cpmData.records.forEach(r => {
+            const skillHtml = r.skillName ? '<span class="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">' + r.skillName + '</span>' : '';
+            let item = '<div class="bg-white border border-slate-200 hover:border-blue-400 transition-colors p-3 rounded-lg cursor-pointer group relative shadow-sm" onclick="loadCpmRecord(\'' + r.id + '\')">';
+            item += '<div class="flex justify-between items-start mb-2 pr-6"><div class="flex flex-col"><span class="text-xs font-bold text-slate-800 truncate max-w-[150px]" title="' + r.recordName + '">' + r.recordName + '</span>' + skillHtml + '</div><div class="text-right"><span class="text-sm font-black text-yellow-500 block leading-none">' + r.cpm + '</span><span class="text-[8px] text-slate-400">CPM</span></div></div>';
+            item += '<div class="flex items-center justify-between text-[10px] text-slate-500 bg-slate-50 rounded px-2 py-1.5 border border-slate-100"><span>⏱️ ' + r.min + '분 ' + r.sec + '초</span><span class="text-slate-300">|</span><span class="text-slate-600 font-bold">⚔️ ' + r.casts + '회</span></div>';
+            item += '<button onclick="deleteCpmRecord(event, \'' + r.id + '\', this)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs">❌</button></div>';
+            html += item;
+        });
+        container.innerHTML = html;
     }
 
     window.loadCpmRecord = function(id) {
-        const record = window.cpmData.records.find(r => r.id === id);
-        if(!record) return;
-        document.getElementById('cpm-record-name').value = record.recordName || ''; document.getElementById('cpm-skill-name').value = record.skillName || '';
-        document.getElementById('cpm-min').value = record.min || ''; document.getElementById('cpm-sec').value = record.sec || '';
-        document.getElementById('cpm-casts').value = record.casts || ''; document.getElementById('cpm-target').value = record.target || '';
-        document.getElementById('cpm-scarecrow').value = record.scarecrow || ''; document.getElementById('cpm-exclude').value = record.exclude || '0';
-        window.editingCpmId = id;
-        const btnSave = document.getElementById('btn-cpm-save');
+        const record = window.cpmData.records.find(r => r.id === id); if(!record) return;
+        document.getElementById('cpm-record-name').value = record.recordName || ''; document.getElementById('cpm-skill-name').value = record.skillName || ''; document.getElementById('cpm-min').value = record.min || ''; document.getElementById('cpm-sec').value = record.sec || '';
+        document.getElementById('cpm-casts').value = record.casts || ''; document.getElementById('cpm-target').value = record.target || ''; document.getElementById('cpm-scarecrow').value = record.scarecrow || ''; document.getElementById('cpm-exclude').value = record.exclude || '0';
+        window.editingCpmId = id; const btnSave = document.getElementById('btn-cpm-save');
         if (btnSave) { btnSave.innerHTML = '💾 수정된 기록 덮어쓰기'; btnSave.className = 'bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 px-8 rounded shadow-sm transition flex items-center gap-2 text-sm'; }
-        const btnCancel = document.getElementById('btn-cpm-cancel');
-        if (btnCancel) btnCancel.classList.remove('hidden');
-        runCpmCalculation(); 
-        const toolTab = document.getElementById('tool-view-cpm');
-        if (toolTab) window.scrollTo({ top: toolTab.offsetTop - 20, behavior: 'smooth' });
+        const btnCancel = document.getElementById('btn-cpm-cancel'); if (btnCancel) btnCancel.classList.remove('hidden');
+        runCpmCalculation(); const toolTab = document.getElementById('tool-view-cpm'); if (toolTab) window.scrollTo({ top: toolTab.offsetTop - 20, behavior: 'smooth' });
     };
 
     window.deleteCpmRecord = function(e, id, btnElement) {
         e.stopPropagation();
         if (btnElement.innerText === "삭제?") {
-            window.cpmData.records = window.cpmData.records.filter(r => r.id !== id);
-            window.saveToCloud(); renderCpmRecords(); showToast('기록이 삭제되었습니다.', 'warning');
+            window.cpmData.records = window.cpmData.records.filter(r => r.id !== id); window.saveToCloud(); renderCpmRecords(); showToast('기록이 삭제되었습니다.', 'warning');
         } else {
-            const orgHtml = btnElement.innerHTML; btnElement.innerText = "삭제?";
-            btnElement.className = "absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-sm opacity-100 transition";
-            setTimeout(() => {
-                if (btnElement && btnElement.innerText === "삭제?") {
-                    btnElement.innerHTML = orgHtml;
-                    btnElement.className = "absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs";
-                }
-            }, 3000);
+            const orgHtml = btnElement.innerHTML; btnElement.innerText = "삭제?"; btnElement.className = "absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-sm opacity-100 transition";
+            setTimeout(() => { if (btnElement && btnElement.innerText === "삭제?") { btnElement.innerHTML = orgHtml; btnElement.className = "absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"; } }, 3000);
         }
     };
 
@@ -1128,15 +1237,26 @@
     window.handlePriceInput = function(el, field) { let raw = el.value.replace(/[^0-9]/g, ''); let num = parseInt(raw) || 0; el.value = raw ? new Intl.NumberFormat('ko-KR').format(num) : ''; if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0}; window.oState.prices[field] = num; window.saveToCloud(); renderOrehaResult(); };
     function formatNum(n) { return new Intl.NumberFormat('ko-KR').format(n); }
 
-    function renderOrehaUI() {
-        document.getElementById('oreha-type-btns').innerHTML = '<button onclick="setOrehaType(\'normal\')" class="p-3 rounded-xl border transition-all duration-200 flex flex-col items-center gap-1.5 ' + (window.oState.craftType === 'normal' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400') + '"><span class="font-bold text-sm">하급 융화석</span><span class="text-[10px]">흰86 / 초45 / 파33</span></button><button onclick="setOrehaType(\'advanced\')" class="p-3 rounded-xl border transition-all duration-200 flex flex-col items-center gap-1.5 ' + (window.oState.craftType === 'advanced' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400') + '"><span class="font-bold text-sm">상급 융화석</span><span class="text-[10px]">흰112 / 초59 / 파43</span></button>';
-
+    window.renderOrehaUI = function() {
+        let typeHtml = '<button onclick="setOrehaType(\'normal\')" class="p-3 rounded-xl border transition-all duration-200 flex flex-col items-center gap-1.5 ' + (window.oState.craftType === 'normal' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400') + '"><span class="font-bold text-sm">하급 융화석</span><span class="text-[10px]">흰86 / 초45 / 파33</span></button>';
+        typeHtml += '<button onclick="setOrehaType(\'advanced\')" class="p-3 rounded-xl border transition-all duration-200 flex flex-col items-center gap-1.5 ' + (window.oState.craftType === 'advanced' ? 'bg-orange-50 border-orange-400 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400') + '"><span class="font-bold text-sm">상급 융화석</span><span class="text-[10px]">흰112 / 초59 / 파43</span></button>';
+        document.getElementById('oreha-type-btns').innerHTML = typeHtml;
+        
         const inv = window.oState.inv;
-        let inputsHTML = '<div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-200"><label class="text-orange-600 text-xs font-bold w-20">🪵 튼튼한 목재</label><input type="text" value="' + (inv.t === 0 || inv.t === undefined ? '' : formatNum(inv.t)) + '" oninput="handleOrehaInput(this, \'t\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-slate-800 text-sm focus:border-orange-500 outline-none transition"></div><div class="flex items-center justify-between gap-3"><label class="text-slate-500 text-xs font-bold w-20">⚪ 흰색 재료</label><input type="text" value="' + (inv.w === 0 ? '' : formatNum(inv.w)) + '" oninput="handleOrehaInput(this, \'w\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-slate-800 text-sm focus:border-slate-500 outline-none transition"></div><div class="flex items-center justify-between gap-3"><label class="text-green-600 text-xs font-bold w-20">🟢 초록 재료</label><input type="text" value="' + (inv.g === 0 ? '' : formatNum(inv.g)) + '" oninput="handleOrehaInput(this, \'g\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-green-700 text-sm focus:border-green-500 outline-none transition"></div><div class="flex items-center justify-between gap-3"><label class="text-blue-600 text-xs font-bold w-20">🔵 파란 재료</label><input type="text" value="' + (inv.b === 0 ? '' : formatNum(inv.b)) + '" oninput="handleOrehaInput(this, \'b\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-blue-700 text-sm focus:border-blue-500 outline-none transition"></div><div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-200"><label class="text-purple-600 text-xs font-bold w-20">🟣 가루</label><input type="text" value="' + (inv.p === 0 ? '' : formatNum(inv.p)) + '" oninput="handleOrehaInput(this, \'p\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div>';
+        let inputsHTML = '<div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-200"><label class="text-orange-600 text-xs font-bold w-20">🪵 튼튼한 목재</label><input type="text" value="' + (inv.t === 0 || inv.t === undefined ? '' : formatNum(inv.t)) + '" oninput="handleOrehaInput(this, \'t\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-slate-800 text-sm focus:border-orange-500 outline-none transition"></div>';
+        inputsHTML += '<div class="flex items-center justify-between gap-3"><label class="text-slate-500 text-xs font-bold w-20">⚪ 흰색 재료</label><input type="text" value="' + (inv.w === 0 ? '' : formatNum(inv.w)) + '" oninput="handleOrehaInput(this, \'w\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-slate-800 text-sm focus:border-slate-500 outline-none transition"></div>';
+        inputsHTML += '<div class="flex items-center justify-between gap-3"><label class="text-green-600 text-xs font-bold w-20">🟢 초록 재료</label><input type="text" value="' + (inv.g === 0 ? '' : formatNum(inv.g)) + '" oninput="handleOrehaInput(this, \'g\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-green-700 text-sm focus:border-green-500 outline-none transition"></div>';
+        inputsHTML += '<div class="flex items-center justify-between gap-3"><label class="text-blue-600 text-xs font-bold w-20">🔵 파란 재료</label><input type="text" value="' + (inv.b === 0 ? '' : formatNum(inv.b)) + '" oninput="handleOrehaInput(this, \'b\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-blue-700 text-sm focus:border-blue-500 outline-none transition"></div>';
+        inputsHTML += '<div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-200"><label class="text-purple-600 text-xs font-bold w-20">🟣 가루</label><input type="text" value="' + (inv.p === 0 ? '' : formatNum(inv.p)) + '" oninput="handleOrehaInput(this, \'p\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-2 px-3 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div>';
         document.getElementById('oreha-inputs-container').innerHTML = inputsHTML;
 
         const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
-        let pricesHTML = '<div><label class="text-slate-500 text-[10px] font-bold block mb-1">🪵 튼튼한목재 (100개)</label><input type="text" value="' + (p.t === 0 || p.t === undefined ? '' : formatNum(p.t)) + '" oninput="handlePriceInput(this, \'t\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-orange-500 outline-none transition"></div><div><label class="text-slate-500 text-[10px] font-bold block mb-1">⚪ 흰색 재료 (100개)</label><input type="text" value="' + (p.w === 0 || p.w === undefined ? '' : formatNum(p.w)) + '" oninput="handlePriceInput(this, \'w\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-slate-500 outline-none transition"></div><div><label class="text-slate-500 text-[10px] font-bold block mb-1">🟢 초록 재료 (100개)</label><input type="text" value="' + (p.g === 0 || p.g === undefined ? '' : formatNum(p.g)) + '" oninput="handlePriceInput(this, \'g\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-green-500 outline-none transition"></div><div><label class="text-slate-500 text-[10px] font-bold block mb-1">🔵 파란 재료 (100개)</label><input type="text" value="' + (p.b === 0 || p.b === undefined ? '' : formatNum(p.b)) + '" oninput="handlePriceInput(this, \'b\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-blue-500 outline-none transition"></div><div><label class="text-slate-500 text-[10px] font-bold block mb-1">📦 하급 어비도스 (1개)</label><input type="text" value="' + (p.low === 0 || p.low === undefined ? '' : formatNum(p.low)) + '" oninput="handlePriceInput(this, \'low\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div><div><label class="text-slate-500 text-[10px] font-bold block mb-1">📦 상급 어비도스 (1개)</label><input type="text" value="' + (p.high === 0 || p.high === undefined ? '' : formatNum(p.high)) + '" oninput="handlePriceInput(this, \'high\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div>';
+        let pricesHTML = '<div><label class="text-slate-500 text-[10px] font-bold block mb-1">🪵 튼튼한목재 (100개)</label><input type="text" value="' + (p.t === 0 || p.t === undefined ? '' : formatNum(p.t)) + '" oninput="handlePriceInput(this, \'t\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-orange-500 outline-none transition"></div>';
+        pricesHTML += '<div><label class="text-slate-500 text-[10px] font-bold block mb-1">⚪ 흰색 재료 (100개)</label><input type="text" value="' + (p.w === 0 || p.w === undefined ? '' : formatNum(p.w)) + '" oninput="handlePriceInput(this, \'w\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-slate-500 outline-none transition"></div>';
+        pricesHTML += '<div><label class="text-slate-500 text-[10px] font-bold block mb-1">🟢 초록 재료 (100개)</label><input type="text" value="' + (p.g === 0 || p.g === undefined ? '' : formatNum(p.g)) + '" oninput="handlePriceInput(this, \'g\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-green-500 outline-none transition"></div>';
+        pricesHTML += '<div><label class="text-slate-500 text-[10px] font-bold block mb-1">🔵 파란 재료 (100개)</label><input type="text" value="' + (p.b === 0 || p.b === undefined ? '' : formatNum(p.b)) + '" oninput="handlePriceInput(this, \'b\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-slate-800 text-sm focus:border-blue-500 outline-none transition"></div>';
+        pricesHTML += '<div><label class="text-slate-500 text-[10px] font-bold block mb-1">📦 하급 어비도스 (1개)</label><input type="text" value="' + (p.low === 0 || p.low === undefined ? '' : formatNum(p.low)) + '" oninput="handlePriceInput(this, \'low\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div>';
+        pricesHTML += '<div><label class="text-slate-500 text-[10px] font-bold block mb-1">📦 상급 어비도스 (1개)</label><input type="text" value="' + (p.high === 0 || p.high === undefined ? '' : formatNum(p.high)) + '" oninput="handlePriceInput(this, \'high\')" placeholder="0" class="w-full bg-white border border-slate-300 rounded py-1.5 px-2 text-right text-purple-700 text-sm focus:border-purple-500 outline-none transition"></div>';
         document.getElementById('oreha-prices-container').innerHTML = pricesHTML;
         renderOrehaResult();
     }
@@ -1148,8 +1268,7 @@
             if (effectiveW < N * req.w) return false;
             if (inv.g < N * req.g) return false;
             const reqB = Math.max(0, N * req.b - inv.b); const ep = Math.ceil(reqB / 10);
-            const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p);
-            const addE = Math.ceil(addP / 80);
+            const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p); const addE = Math.ceil(addP / 80);
             const excessW = effectiveW - N * req.w; const excessG = inv.g - N * req.g;
             return (Math.floor(excessW / 100) + Math.floor(excessG / 50)) >= addE;
         };
@@ -1158,10 +1277,8 @@
         while (low <= high) { let mid = Math.floor((low + high) / 2); if (isPossible(mid)) { best = mid; low = mid + 1; } else high = mid - 1; }
         if (best === 0) return null;
 
-        const N = best;
-        const reqB = Math.max(0, N * req.b - inv.b); const ep = Math.ceil(reqB / 10);
-        const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p);
-        const addE = Math.ceil(addP / 80);
+        const N = best; const reqB = Math.max(0, N * req.b - inv.b); const ep = Math.ceil(reqB / 10);
+        const reqP = ep * 100; const addP = Math.max(0, reqP - inv.p); const addE = Math.ceil(addP / 80);
         let remW = effectiveW - N * req.w; let remG = inv.g - N * req.g; let ew = 0, eg = 0;
 
         for (let i = 0; i < addE; i++) {
@@ -1171,10 +1288,8 @@
         
         return {
             crafts: N, gold: N * req.gold, et, ew, eg, ep,
-            usedT: et * 5, usedW: N * req.w + ew * 100, usedG: N * req.g + eg * 50,
-            usedB: N * req.b, usedP: ep * 100,
-            finalT: (inv.t || 0) - (et * 5), finalW: remW, finalG: remG,
-            finalB: inv.b + ep * 10 - N * req.b, finalP: inv.p + (ew + eg) * 80 - ep * 100
+            usedT: et * 5, usedW: N * req.w + ew * 100, usedG: N * req.g + eg * 50, usedB: N * req.b, usedP: ep * 100,
+            finalT: (inv.t || 0) - (et * 5), finalW: remW, finalG: remG, finalB: inv.b + ep * 10 - N * req.b, finalP: inv.p + (ew + eg) * 80 - ep * 100
         };
     }
 
@@ -1187,8 +1302,7 @@
     function renderOrehaResult() {
         const resContainer = document.getElementById('oreha-result-container');
         if (!resContainer) return;
-        const res = calculateOreha();
-        const inv = window.oState.inv; const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
+        const res = calculateOreha(); const inv = window.oState.inv; const p = window.oState.prices || {w:0, g:0, b:0, t:0, low:0, high:0};
 
         const rawRevenue = (inv.t / 100) * (p.t || 0) + (inv.w / 100) * (p.w || 0) + (inv.g / 100) * (p.g || 0) + (inv.b / 100) * (p.b || 0);
         const sellRawProfit = rawRevenue * 0.95;
@@ -1196,8 +1310,7 @@
         let craftProfit = sellRawProfit; let expectedOrehas = 0;
         if (res && res.crafts > 0) {
             const targetPrice = window.oState.craftType === 'normal' ? (p.low || 0) : (p.high || 0);
-            expectedOrehas = res.crafts * 10.535; 
-            const orehaRevenue = expectedOrehas * targetPrice;
+            expectedOrehas = res.crafts * 10.535; const orehaRevenue = expectedOrehas * targetPrice;
             const leftoverRevenue = (res.finalT / 100) * (p.t || 0) + (res.finalW / 100) * (p.w || 0) + (res.finalG / 100) * (p.g || 0) + (res.finalB / 100) * (p.b || 0);
             craftProfit = (orehaRevenue * 0.95) - res.gold + (leftoverRevenue * 0.95);
         }
@@ -1205,7 +1318,8 @@
         const diff = craftProfit - sellRawProfit;
 
         if (!res) {
-            resContainer.innerHTML = '<div class="h-full min-h-[350px] bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-slate-400 p-6 text-center shadow-sm"><span class="text-5xl mb-4 opacity-40">⛏️</span><p class="text-sm font-bold text-slate-500">제작 가능한 횟수가 없습니다.</p><p class="text-[11px] mt-1.5 opacity-60">좌측 패널에서 보유하신 재료 수량을 정확히 입력해주세요.</p></div>'; return;
+            resContainer.innerHTML = '<div class="h-full min-h-[350px] bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-slate-400 p-6 text-center shadow-sm"><span class="text-5xl mb-4 opacity-40">⛏️</span><p class="text-sm font-bold text-slate-500">제작 가능한 횟수가 없습니다.</p><p class="text-[11px] mt-1.5 opacity-60">좌측 패널에서 보유하신 재료 수량을 정확히 입력해주세요.</p></div>';
+            return;
         }
 
         let planHtml = '';
@@ -1219,11 +1333,52 @@
         }
 
         const req = OREHA_REQ[window.oState.craftType];
+        
         let tableRows = '<tr class="border-b border-slate-100"><td class="py-2.5 text-orange-600 font-bold">🪵 튼튼한 목재</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedT) + '</td><td class="py-2.5 text-right text-slate-800 font-bold">' + formatNum(res.finalT) + '</td></tr>';
-        tableRows += '<tr class="border-b border-slate-100"><td class="py-2.5 text-slate-600 font-bold">⚪ 흰색 재료</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedW) + '</td><td class="py-2.5 text-right ' + (res.finalW >= req.w ? 'text-green-600 font-bold':'text-red-500') + '">' + formatNum(res.finalW) + ' ' + (res.finalW < req.w ? '<span class="text-[9px] font-normal ml-1">(-' + formatNum(req.w - res.finalW) + ')</span>':'') + '</td></tr><tr class="border-b border-slate-100"><td class="py-2.5 text-green-600 font-bold">🟢 초록 재료</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedG) + '</td><td class="py-2.5 text-right ' + (res.finalG >= req.g ? 'text-green-600 font-bold':'text-red-500') + '">' + formatNum(res.finalG) + ' ' + (res.finalG < req.g ? '<span class="text-[9px] font-normal ml-1">(-' + formatNum(req.g - res.finalG) + ')</span>':'') + '</td></tr><tr class="border-b border-slate-100"><td class="py-2.5 text-blue-600 font-bold">🔵 파란 재료</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedB) + '</td><td class="py-2.5 text-right ' + (res.finalB >= req.b ? 'text-green-600 font-bold':'text-red-500') + '">' + formatNum(res.finalB) + ' ' + (res.finalB < req.b ? '<span class="text-[9px] font-normal ml-1">(-' + formatNum(req.b - res.finalB) + ')</span>':'') + '</td></tr><tr><td class="py-2.5 text-purple-600 font-bold">🟣 가루</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedP) + '</td><td class="py-2.5 text-right text-slate-800 font-bold">' + formatNum(res.finalP) + '</td></tr>';
+        
+        let wWarning = res.finalW < req.w ? '<span class="text-[9px] font-normal ml-1">(-' + formatNum(req.w - res.finalW) + ')</span>' : '';
+        tableRows += '<tr class="border-b border-slate-100"><td class="py-2.5 text-slate-600 font-bold">⚪ 흰색 재료</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedW) + '</td><td class="py-2.5 text-right ' + (res.finalW >= req.w ? 'text-green-600 font-bold':'text-red-500') + '">' + formatNum(res.finalW) + ' ' + wWarning + '</td></tr>';
+        
+        let gWarning = res.finalG < req.g ? '<span class="text-[9px] font-normal ml-1">(-' + formatNum(req.g - res.finalG) + ')</span>' : '';
+        tableRows += '<tr class="border-b border-slate-100"><td class="py-2.5 text-green-600 font-bold">🟢 초록 재료</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedG) + '</td><td class="py-2.5 text-right ' + (res.finalG >= req.g ? 'text-green-600 font-bold':'text-red-500') + '">' + formatNum(res.finalG) + ' ' + gWarning + '</td></tr>';
+        
+        let bWarning = res.finalB < req.b ? '<span class="text-[9px] font-normal ml-1">(-' + formatNum(req.b - res.finalB) + ')</span>' : '';
+        tableRows += '<tr class="border-b border-slate-100"><td class="py-2.5 text-blue-600 font-bold">🔵 파란 재료</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedB) + '</td><td class="py-2.5 text-right ' + (res.finalB >= req.b ? 'text-green-600 font-bold':'text-red-500') + '">' + formatNum(res.finalB) + ' ' + bWarning + '</td></tr>';
+        
+        tableRows += '<tr><td class="py-2.5 text-purple-600 font-bold">🟣 가루</td><td class="py-2.5 text-right text-red-500">-' + formatNum(res.usedP) + '</td><td class="py-2.5 text-right text-slate-800 font-bold">' + formatNum(res.finalP) + '</td></tr>';
 
-        resContainer.innerHTML = '<div class="space-y-4 h-full flex flex-col"><div class="bg-gradient-to-br from-orange-50 to-white rounded-xl p-6 border border-orange-200 shadow-md text-center relative overflow-hidden"><h3 class="text-orange-700 text-[11px] font-bold mb-2 tracking-wide">거래가능 재료 최대 제작 횟수</h3><div class="text-5xl font-black text-slate-800 mb-5 drop-shadow-sm">' + formatNum(res.crafts) + '<span class="text-xl text-slate-500 ml-1.5 font-bold">회</span></div><div class="grid grid-cols-2 gap-3"><div class="bg-white rounded-lg p-2.5 border border-slate-200 shadow-sm"><p class="text-[10px] text-slate-500 mb-1 font-bold">필요 골드</p><p class="text-sm font-bold text-yellow-600 flex items-center justify-center gap-1"><span>💰</span> ' + formatNum(res.gold) + '</p></div><div class="bg-white rounded-lg p-2.5 border border-slate-200 shadow-sm"><p class="text-[10px] text-slate-500 mb-1 font-bold">제작 목표</p><p class="text-sm font-bold text-slate-800">' + req.name + '</p></div></div></div><div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-2"><h3 class="text-xs font-bold text-slate-800 mb-1 flex items-center justify-between"><span>⚖️ 수익 비교 결과</span>' + (diff > 0 && expectedOrehas > 0 ? '<span class="bg-green-100 text-green-700 border border-green-300 px-2 py-0.5 rounded text-[10px] font-bold">제작이 이득</span>' : (diff < 0 && expectedOrehas > 0 ? '<span class="bg-red-100 text-red-700 border border-red-300 px-2 py-0.5 rounded text-[10px] font-bold">단순 판매가 이득</span>' : '')) + '</h3><div class="grid grid-cols-2 gap-3"><div class="bg-white p-3 rounded-lg border shadow-sm ' + (diff <= 0 && rawRevenue > 0 && expectedOrehas > 0 ? 'border-red-300' : 'border-slate-200') + '"><p class="text-[10px] text-slate-500 mb-1 font-bold">모든 재료 단순 판매 시</p><p class="text-sm font-black text-slate-800">' + formatNum(Math.floor(sellRawProfit)) + ' <span class="text-[10px] font-normal text-slate-400">골드</span></p></div><div class="bg-white p-3 rounded-lg border shadow-sm ' + (diff > 0 && expectedOrehas > 0 ? 'border-green-400' : 'border-slate-200') + '"><p class="text-[10px] text-slate-500 mb-1 font-bold">최대 제작 후 판매 시</p><p class="text-sm font-black text-slate-800">' + formatNum(Math.floor(craftProfit)) + ' <span class="text-[10px] font-normal text-slate-400">골드</span></p></div></div>' + (diff !== 0 && sellRawProfit > 0 && expectedOrehas > 0 ? '<div class="text-center mt-1 p-2 rounded bg-white border border-slate-200 text-xs shadow-sm">' + (diff > 0 ? '제작해서 파는 것이 <span class="text-green-600 font-bold">' + formatNum(Math.floor(diff)) + ' 골드</span> 더 이득입니다.' : '재료를 그냥 파는 것이 <span class="text-red-500 font-bold">' + formatNum(Math.floor(Math.abs(diff))) + ' 골드</span> 더 이득입니다.') + '</div>' : '') + '<p class="text-[9px] text-slate-400 mt-1 font-medium">* 거래소 수수료 5% 및 대성공 5.35% (총 ' + formatNum(Math.floor(expectedOrehas)) + '개 획득 예상) 산출 반영 기준</p></div><div class="bg-slate-50 rounded-xl p-4 border border-slate-200"><h3 class="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span>🔄</span> 추천 교환 플랜</h3>' + planHtml + '</div><div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex-grow"><div class="flex justify-between items-center mb-3 border-b border-slate-200 pb-2"><h3 class="text-xs font-bold text-slate-800">재료 결산</h3><button onclick="applyOrehaRemaining()" class="bg-orange-500 hover:bg-orange-400 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1">✔️ 남은 수량 덮어쓰기</button></div><table class="w-full text-left text-xs"><thead class="text-slate-500 border-b border-slate-200 font-bold"><tr><th class="pb-2">재료</th><th class="pb-2 text-right">소모/변환량</th><th class="pb-2 text-right">남는 수량</th></tr></thead><tbody>' + tableRows + '</tbody></table></div></div>';
+        let profitBadge = '';
+        if (diff > 0 && expectedOrehas > 0) profitBadge = '<span class="bg-green-100 text-green-700 border border-green-300 px-2 py-0.5 rounded text-[10px] font-bold">제작이 이득</span>';
+        else if (diff < 0 && expectedOrehas > 0) profitBadge = '<span class="bg-red-100 text-red-700 border border-red-300 px-2 py-0.5 rounded text-[10px] font-bold">단순 판매가 이득</span>';
+
+        let conclusionBox = '';
+        if (diff !== 0 && sellRawProfit > 0 && expectedOrehas > 0) {
+            let msg = diff > 0 
+                ? '제작해서 파는 것이 <span class="text-green-600 font-bold">' + formatNum(Math.floor(diff)) + ' 골드</span> 더 이득입니다.'
+                : '재료를 그냥 파는 것이 <span class="text-red-500 font-bold">' + formatNum(Math.floor(Math.abs(diff))) + ' 골드</span> 더 이득입니다.';
+            conclusionBox = '<div class="text-center mt-1 p-2 rounded bg-white border border-slate-200 text-xs shadow-sm">' + msg + '</div>';
+        }
+
+        let html = '<div class="space-y-4 h-full flex flex-col"><div class="bg-gradient-to-br from-orange-50 to-white rounded-xl p-6 border border-orange-200 shadow-md text-center relative overflow-hidden">';
+        html += '<h3 class="text-orange-700 text-[11px] font-bold mb-2 tracking-wide">거래가능 재료 최대 제작 횟수</h3><div class="text-5xl font-black text-slate-800 mb-5 drop-shadow-sm">' + formatNum(res.crafts) + '<span class="text-xl text-slate-500 ml-1.5 font-bold">회</span></div>';
+        html += '<div class="grid grid-cols-2 gap-3"><div class="bg-white rounded-lg p-2.5 border border-slate-200 shadow-sm"><p class="text-[10px] text-slate-500 mb-1 font-bold">필요 골드</p><p class="text-sm font-bold text-yellow-600 flex items-center justify-center gap-1"><span>💰</span> ' + formatNum(res.gold) + '</p></div>';
+        html += '<div class="bg-white rounded-lg p-2.5 border border-slate-200 shadow-sm"><p class="text-[10px] text-slate-500 mb-1 font-bold">제작 목표</p><p class="text-sm font-bold text-slate-800">' + req.name + '</p></div></div></div>';
+        
+        html += '<div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-2"><h3 class="text-xs font-bold text-slate-800 mb-1 flex items-center justify-between"><span>⚖️ 수익 비교 결과</span>' + profitBadge + '</h3>';
+        html += '<div class="grid grid-cols-2 gap-3"><div class="bg-white p-3 rounded-lg border shadow-sm ' + (diff <= 0 && rawRevenue > 0 && expectedOrehas > 0 ? 'border-red-300' : 'border-slate-200') + '"><p class="text-[10px] text-slate-500 mb-1 font-bold">모든 재료 단순 판매 시</p><p class="text-sm font-black text-slate-800">' + formatNum(Math.floor(sellRawProfit)) + ' <span class="text-[10px] font-normal text-slate-400">골드</span></p></div>';
+        html += '<div class="bg-white p-3 rounded-lg border shadow-sm ' + (diff > 0 && expectedOrehas > 0 ? 'border-green-400' : 'border-slate-200') + '"><p class="text-[10px] text-slate-500 mb-1 font-bold">최대 제작 후 판매 시</p><p class="text-sm font-black text-slate-800">' + formatNum(Math.floor(craftProfit)) + ' <span class="text-[10px] font-normal text-slate-400">골드</span></p></div></div>';
+        html += conclusionBox;
+        html += '<p class="text-[9px] text-slate-400 mt-1 font-medium">* 거래소 수수료 5% 및 대성공 5.35% (총 ' + formatNum(Math.floor(expectedOrehas)) + '개 획득 예상) 산출 반영 기준</p></div>';
+
+        html += '<div class="bg-slate-50 rounded-xl p-4 border border-slate-200"><h3 class="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span>🔄</span> 추천 교환 플랜</h3>' + planHtml + '</div>';
+        html += '<div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex-grow"><div class="flex justify-between items-center mb-3 border-b border-slate-200 pb-2"><h3 class="text-xs font-bold text-slate-800">재료 결산</h3><button onclick="applyOrehaRemaining()" class="bg-orange-500 hover:bg-orange-400 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1">✔️ 남은 수량 덮어쓰기</button></div>';
+        html += '<table class="w-full text-left text-xs"><thead class="text-slate-500 border-b border-slate-200 font-bold"><tr><th class="pb-2">재료</th><th class="pb-2 text-right">소모/변환량</th><th class="pb-2 text-right">남는 수량</th></tr></thead><tbody>' + tableRows + '</tbody></table></div></div>';
+        
+        resContainer.innerHTML = html;
     }
+
+    // 초기화를 가장 마지막에 안전하게 호출
+    setTimeout(initCloudDB, 300);
 </script>
 </body>
 </html>
