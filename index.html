@@ -42,7 +42,6 @@
 </div>
 
 <div class="max-w-[95%] mx-auto space-y-5 pb-10">
-    <!-- 상태 표시줄 -->
     <div class="flex justify-end items-center gap-2 mb-1">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse"></span>
         <span id="cloud-status" class="text-[11px] text-orange-500 font-bold tracking-wide">클라우드 연결 중...</span>
@@ -579,7 +578,6 @@
                 const isSupp = supporters.includes(char.name);
                 const borderClass = isSupp ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200';
                 
-                // 💡 [던전 완료 시각적 처리] 모든 숙제를 다 했는지 체크
                 const isAllCleared = char.contents && char.contents.length > 0 && char.contents.every(content => window.isCharClearedDungeon(char, content));
                 const opacityClass = isAllCleared ? 'opacity-40 grayscale line-through' : '';
                 const textStyle = isAllCleared ? 'line-through text-slate-400' : 'text-slate-700';
@@ -607,16 +605,16 @@
                 
                 boardHtml += '<div class="glass-panel p-3 transition-all relative group ' + completedCls + '">';
                 
-                // 💡 [파티 한 번에 비우기 버튼 추가] (휴지통 버튼 바로 옆)
-                boardHtml += '<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">';
-                boardHtml += '<button onclick="clearPartySlots(\'' + pData.id + '\')" class="text-slate-400 hover:text-blue-500 p-1 text-xs" title="파티 비우기">🔄</button>';
-                boardHtml += '<button onclick="deleteParty(\'' + pData.id + '\')" class="text-slate-400 hover:text-red-500 p-1 text-xs" title="파티 삭제">❌</button>';
-                boardHtml += '</div>';
-
-                boardHtml += '<div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2 pr-12"><div class="flex items-center gap-1.5">';
+                // 💡 [버튼 상시 노출 및 위치 변경]
+                boardHtml += '<div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2"><div class="flex items-center gap-1.5">';
                 boardHtml += '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded ' + diffInfo.color + '">' + pData.diff + '</span></div>';
                 boardHtml += '<div class="flex items-center gap-2"><span class="text-[10px] text-slate-400 font-bold">Lv.' + pData.level + '</span>';
-                boardHtml += '<label class="flex items-center cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + checkedAttr + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label></div></div>';
+                boardHtml += '<label class="flex items-center cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + checkedAttr + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label>';
+                boardHtml += '<div class="flex items-center gap-1 ml-1 pl-2 border-l border-slate-200">';
+                boardHtml += '<button onclick="clearPartySlots(\'' + pData.id + '\')" class="text-blue-500 bg-blue-50 hover:bg-blue-100 p-1 rounded transition text-xs shadow-sm" title="파티 비우기">🔄</button>';
+                boardHtml += '<button onclick="deleteParty(\'' + pData.id + '\')" class="text-red-500 bg-red-50 hover:bg-red-100 p-1 rounded transition text-xs shadow-sm" title="파티 삭제">❌</button>';
+                boardHtml += '</div></div></div>';
+                
                 boardHtml += '<div class="grid grid-cols-1 gap-1.5">';
                 
                 if (!pData.slots) pData.slots = ["", "", "", ""];
@@ -630,7 +628,6 @@
                         const pColor = getPlayerColor(char.player);
                         const isSupp = supporters.includes(char.name);
                         
-                        // 💡 [시각적 강조] 플레이어 테마 색상으로 슬롯 배경/테두리 칠하고 텍스트 키우기
                         boardHtml += '<div class="flex items-center justify-between p-2 rounded border ' + pColor.border + ' ' + pColor.bg + ' shadow-sm"><div class="flex items-center gap-1.5">';
                         boardHtml += '<span class="text-[10px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1.5 py-0.5 rounded">' + char.player + '</span>';
                         boardHtml += '<span class="text-xs font-black text-slate-800 tracking-wide">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : '') + char.name + '</span></div>';
@@ -672,7 +669,6 @@
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
-    // 💡 [파티 한번에 비우기 함수]
     window.clearPartySlots = function(partyId) {
         const party = window.partyData.find(p => p.id === partyId);
         if(party) {
@@ -738,14 +734,25 @@
 
         if (!party.slots) party.slots = ["", "", "", ""];
         
-        // 💡 [유효성 검사] 동일한 던전 라인에 한 캐릭터가 2번 들어가는 것 방지
         if (party.slots.includes(charId) && party.slots.indexOf(charId) !== slotIndex) {
-            // 같은 파티 안에서 자리만 이동하는 경우는 허용 (그냥 넘어감)
+            // 같은 파티 내에서의 슬롯 이동은 패스
         } else {
-            // 다른 파티(동일한 던전 카테고리)에 이미 소속되어 있는지 검사
-            const existingParty = window.partyData.find(p => p.cat === party.cat && p.slots && p.slots.includes(charId));
-            if (existingParty && existingParty.id !== partyId) {
-                showToast(`해당 캐릭터는 이미 다른 ${party.cat} 파티에 참여 중입니다.`, 'warning');
+            // 💡 [유효성 검사 1] 동일한 플레이어의 다른 캐릭터가 이 파티에 있는지 확인
+            const isPlayerAlreadyInParty = party.slots.some(sId => {
+                if(!sId || sId === charId) return false;
+                const c = window.charactersData.find(x => x.dbId === sId);
+                return c && c.player === char.player;
+            });
+            
+            if (isPlayerAlreadyInParty) {
+                showToast(`한 파티에 동일한 플레이어(${char.player})가 2명 들어갈 수 없습니다.`, 'warning');
+                return;
+            }
+
+            // [유효성 검사 2] 이 캐릭터가 동일한 던전 라인(cat)의 다른 파티에 있는지 확인
+            const existingParty = window.partyData.find(p => p.cat === party.cat && p.id !== party.id && p.slots && p.slots.includes(charId));
+            if (existingParty) {
+                showToast(`해당 캐릭터(${char.name})는 이미 다른 ${party.cat} 파티에 참여 중입니다.`, 'warning');
                 return;
             }
         }
@@ -783,12 +790,23 @@
         list.innerHTML = '';
         currentDropdownTarget = { partyId, slotIndex };
 
-        // 💡 [드롭다운에서도 필터링] 레벨이 부족하거나, 이 카테고리의 다른 파티에 이미 배정된 캐릭터는 목록에서 숨김
+        // 💡 [드롭다운 필터 강화] 레벨 부족, 이미 배정된 캐릭터, 중복 플레이어 숨김
         let availableChars = window.charactersData.filter(char => {
-            if (char.level < party.level) return false; // 레벨 미달
-            if (party.slots && party.slots.includes(char.dbId)) return false; // 이 파티에 이미 배정됨
+            if (char.level < party.level) return false;
+            if (party.slots && party.slots.includes(char.dbId)) return false;
+            
+            // 동일 캐릭터가 다른 파티(동일 던전)에 있는지 체크
             const inOtherParty = window.partyData.some(p => p.cat === party.cat && p.id !== party.id && p.slots && p.slots.includes(char.dbId));
-            if (inOtherParty) return false; // 다른 동일 던전 파티에 배정됨
+            if (inOtherParty) return false;
+            
+            // 동일 플레이어의 다른 캐릭터가 이 파티에 이미 있는지 체크
+            const playerInThisParty = party.slots.some(sId => {
+                if (!sId) return false;
+                const c = window.charactersData.find(x => x.dbId === sId);
+                return c && c.player === char.player;
+            });
+            if (playerInThisParty) return false;
+
             return true;
         });
         
