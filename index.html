@@ -238,7 +238,6 @@
     });
   };
 
-  // 핵심 기능 함수들 정의
   window.calculateContents = function(level) {
       let contents = [];
       if (level < 1700) return ['1700미만'];
@@ -506,7 +505,7 @@
           const pColor = getPlayerColor(player);
           const isExpanded = window.summaryStates[player] === true; 
           
-          let html = '<div class="glass-panel border-t-4 ' + pColor.border + ' p-3 md:p-4 bg-white">';
+          let html = '<div class="glass-panel border-t-4 ' + pColor.border + ' p-3 md:p-4 ' + pColor.bg + '">';
           html += '<h2 class="text-base md:text-lg font-black mb-2.5 ' + pColor.text + ' border-b border-slate-100 pb-1.5 flex justify-between items-center">';
           html += '<span>' + player + '</span>';
           html += '<button onclick="toggleSummary(\'' + player + '\')" class="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 shadow-sm">';
@@ -599,11 +598,13 @@
               contentsHtml += '</div>';
               
               const isSupp = supporters.includes(char.name);
-              const cardClass = isSupp ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200 hover:bg-slate-50';
+              const isAllCleared = char.contents && char.contents.length > 0 && char.contents.every(content => window.isCharClearedDungeon(char, content));
+              const cardClass = (isSupp && !isAllCleared) ? 'supporter-glow border-slate-200 bg-white' : 'bg-white border-slate-200 hover:bg-slate-50';
+              const opacityClass = isAllCleared ? 'opacity-40 grayscale !bg-slate-50' : '';
 
-              html += '<div class="rounded-lg p-2 md:p-2.5 border flex flex-col sm:flex-row sm:items-center justify-between transition gap-1.5 shadow-sm ' + cardClass + '">';
+              html += '<div class="rounded-lg p-2 md:p-2.5 border flex flex-col sm:flex-row sm:items-center justify-between transition gap-1.5 shadow-sm ' + cardClass + ' ' + opacityClass + '">';
               html += '<div class="flex items-center gap-1.5 whitespace-nowrap min-w-max">';
-              html += '<span class="font-bold text-[13px] text-slate-800">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-xs">✨</span>' : '') + char.name + '</span>';
+              html += '<span class="font-bold text-[13px] ' + (isAllCleared ? 'line-through text-slate-400' : 'text-slate-800') + '">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-xs">✨</span>' : '') + char.name + '</span>';
               html += '<span class="text-[11px] md:text-xs text-slate-500 font-medium">Lv.' + char.level + '</span></div>';
               html += contentsHtml + '</div>';
           });
@@ -640,17 +641,17 @@
       for (let player in grouped) {
           grouped[player].sort((a, b) => b.level - a.level);
           const pColor = getPlayerColor(player);
-          rosterHtml += '<div class="mb-2.5"><div class="text-[10px] font-black ' + pColor.text + ' mb-1 px-1 bg-slate-50 rounded text-center border border-slate-100 py-0.5">' + player + '</div><div class="flex flex-col gap-1">';
+          rosterHtml += '<div class="mb-2.5"><div class="text-[10px] font-black ' + pColor.text + ' mb-1 px-1 ' + pColor.bg + ' rounded text-center border ' + pColor.border + ' py-0.5">' + player + '</div><div class="flex flex-col gap-1">';
           
           grouped[player].forEach(char => {
               const isSupp = supporters.includes(char.name);
-              const borderClass = isSupp ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200';
-              
               const isAllCleared = char.contents && char.contents.length > 0 && char.contents.every(content => window.isCharClearedDungeon(char, content));
+              
+              const borderClass = (isSupp && !isAllCleared) ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200';
               const opacityClass = isAllCleared ? 'opacity-40 grayscale bg-slate-50' : '';
               const textStyle = isAllCleared ? 'line-through text-slate-400' : 'text-slate-700';
 
-              rosterHtml += `<div id="roster-char-${char.dbId}" data-char-id="${char.dbId}" draggable="true" ondragstart="dragStart(event, '${char.dbId}')" class="roster-char-element flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition ${borderClass} ${opacityClass}">`;
+              rosterHtml += `<div id="roster-char-${char.dbId}" data-char-id="${char.dbId}" draggable="true" ondragstart="dragStart(event, '${char.dbId}')" onclick="handleRosterClick('${char.dbId}')" class="roster-char-element flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition ${borderClass} ${opacityClass}">`;
               rosterHtml += '<span class="text-[11px] font-bold ' + textStyle + '">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span>';
               rosterHtml += '<span class="text-[9px] text-slate-400 font-medium ' + (isAllCleared ? 'line-through' : '') + '">' + char.level + '</span></div>';
           });
@@ -730,6 +731,28 @@
       container.innerHTML = filterHtml + mainContent;
 
       setTimeout(() => { if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM(); }, 0);
+  };
+
+  // 4번 요청: 원클릭 자동 파티 배정 기능
+  window.handleRosterClick = function(charId) {
+      if (!window.activeHighlightPartyId) return;
+      const party = window.partyData.find(p => p.id === window.activeHighlightPartyId);
+      const char = window.charactersData.find(c => c.dbId === charId);
+      if (!party || !char) return;
+
+      if (!window.isCharEligibleForParty(char, party)) {
+          window.showToast('배정 조건을 만족하지 않습니다. (레벨 부족 또는 플레이어 중복)', 'warning');
+          return;
+      }
+
+      if (!party.slots) party.slots = ["", "", "", ""];
+      const emptyIdx = party.slots.findIndex(s => s === "" || s === null);
+      if (emptyIdx === -1) {
+          window.showToast('파티에 빈자리가 없습니다.', 'warning');
+          return;
+      }
+
+      window.assignCharacterToSlot(charId, party.id, emptyIdx);
   };
 
   window.addParty = function(catId, diffName, diffLevel) {
@@ -906,23 +929,26 @@
       }
 
       menu.style.display = 'block'; 
-      let topPos = rect.bottom + window.scrollY + 5; 
-      let leftPos = rect.left + window.scrollX;
+      // 3번 요청: 드롭다운 메뉴 위치 수정 (스크롤 무시, viewport 절대좌표 사용)
+      let topPos = rect.bottom + 5; 
+      let leftPos = rect.left;
       
-      if (topPos + menu.offsetHeight > window.innerHeight + window.scrollY) {
-          topPos = rect.top + window.scrollY - menu.offsetHeight - 5;
+      if (topPos + menu.offsetHeight > window.innerHeight) {
+          topPos = rect.top - menu.offsetHeight - 5;
       }
-      if (leftPos + menu.offsetWidth > window.innerWidth + window.scrollX) {
-          leftPos = window.innerWidth + window.scrollX - menu.offsetWidth - 10;
+      if (leftPos + menu.offsetWidth > window.innerWidth) {
+          leftPos = window.innerWidth - menu.offsetWidth - 10;
       }
-      menu.style.top = topPos + 'px'; menu.style.left = leftPos + 'px';
+      menu.style.top = topPos + 'px'; 
+      menu.style.left = leftPos + 'px';
   };
 
   window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
   
+  // 4번 요청 부가 조건: 로스터를 클릭했을 때는 하이라이트가 안 풀리도록 방어 처리
   document.addEventListener('click', (e) => { 
       if (!e.target.closest('#dropdown-menu')) window.closeDropdown(); 
-      if (window.activeHighlightPartyId && !e.target.closest('.party-box-element')) {
+      if (window.activeHighlightPartyId && !e.target.closest('.party-box-element') && !e.target.closest('.roster-char-element')) {
           window.activeHighlightPartyId = null;
           if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
       }
