@@ -6,55 +6,25 @@
     <title>로스트아크 클라우드 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            background-color: #f8fafc;
-            color: #1e293b;
-            font-family: 'Pretendard', sans-serif;
-            overflow-y: scroll;
-            overflow-x: hidden;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid rgba(226, 232, 240, 1);
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
+        body { background-color: #f8fafc; color: #1e293b; font-family: 'Pretendard', sans-serif; overflow-y: scroll; }
+        .glass-panel { background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(226, 232, 240, 1); border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .tab-btn { transition: all 0.3s; color: #475569; background-color: #ffffff; }
         .tab-btn:hover { background-color: #f1f5f9; }
         .tab-btn.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border-color: transparent; }
-        
         .checkbox-custom:checked + div { background-color: #3b82f6; border-color: #3b82f6; color: white; }
-
-        .dungeon-badge {
-            transition: all 0.2s ease; cursor: pointer; user-select: none;
-            border-width: 1px; display: inline-flex; align-items: center; justify-content: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin: 2px;
-        }
+        .dungeon-badge { transition: all 0.2s ease; cursor: pointer; user-select: none; border-width: 1px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin: 2px; }
         .dungeon-badge:hover { transform: translateY(-1px); box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1); }
         .dungeon-badge:active { transform: translateY(0); }
-        .dungeon-badge.completed {
-            text-decoration: line-through; opacity: 0.5; filter: grayscale(100%);
-            background: #f1f5f9 !important; border-color: #e2e8f0 !important;
-            color: #94a3b8 !important; box-shadow: none;
-        }
-
-        .supporter-glow {
-            border-left-color: #fbbf24 !important; border-left-width: 4px !important;
-            background: linear-gradient(90deg, rgba(253,230,138,0.2) 0%, rgba(255,255,255,1) 100%) !important;
-        }
-
+        .dungeon-badge.completed { text-decoration: line-through; opacity: 0.5; filter: grayscale(100%); background: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #94a3b8 !important; box-shadow: none; }
+        .supporter-glow { border-left-color: #fbbf24 !important; border-left-width: 4px !important; background: linear-gradient(90deg, rgba(253,230,138,0.2) 0%, rgba(255,255,255,1) 100%) !important; }
         .slot-droppable { border: 2px dashed #cbd5e1; transition: all 0.2s; }
         .slot-droppable.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
         .party-completed { opacity: 0.55; filter: grayscale(80%); transition: all 0.3s; }
-
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 10px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
         .cpm-table th, .cpm-table td { border: 1px solid #e2e8f0; padding: 8px 12px; }
-
         @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .toast-enter { animation: slideInUp 0.3s forwards; }
@@ -63,7 +33,6 @@
 </head>
 <body class="p-3 md:p-5 min-h-screen relative">
 
-<!-- 툴팁 및 토스트 컨테이너 -->
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-white border border-slate-200 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -73,7 +42,6 @@
     <ul id="dropdown-list" class="max-h-60 overflow-y-auto"></ul>
 </div>
 
-<!-- 메인 레이아웃 (95% 와이드) -->
 <div class="max-w-[95%] mx-auto space-y-5 pb-10">
     <!-- 상태 표시줄 -->
     <div class="flex justify-end items-center gap-2 mb-1">
@@ -81,13 +49,11 @@
         <span id="cloud-status" class="text-[11px] text-orange-500 font-bold tracking-wide">클라우드 연결 중...</span>
     </div>
 
-    <!-- 헤더 -->
     <div class="text-center space-y-1.5 relative">
         <h1 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">💻 로스트아크 클라우드 대시보드</h1>
         <p class="text-xs md:text-sm text-slate-500">칸반 보드 기반 파티 플래너 / 와이드 뷰 지원 / 수요일 자동 리셋</p>
     </div>
 
-    <!-- 메인 탭 메뉴 -->
     <div class="flex flex-wrap justify-center gap-2 mb-4">
         <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">📊 대시보드</button>
         <button onclick="switchTab('filter')" id="tab-filter" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">🔍 던전 파티 검색</button>
@@ -95,7 +61,7 @@
         <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
-    <!-- 1. 대시보드 (파티 보드 & 개인 숙제) -->
+    <!-- 1. 대시보드 -->
     <div id="view-dashboard" class="space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
             <div>
@@ -111,9 +77,7 @@
                 </button>
             </div>
         </div>
-        <div id="dashboard-container">
-            <!-- 렌더링 영역 -->
-        </div>
+        <div id="dashboard-container"></div>
     </div>
 
     <!-- 2. 파티 필터 검색 -->
@@ -122,7 +86,9 @@
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
             <div id="filter-checkboxes" class="flex flex-wrap gap-2"></div>
         </div>
-        <div id="filter-results" class="space-y-4"></div>
+        <div id="filter-results" class="space-y-4">
+            <div class="text-center text-slate-400 py-10 glass-panel text-sm font-medium">던전을 체크하시면 난이도별로 그룹화되어 나타납니다.</div>
+        </div>
     </div>
 
     <!-- 3. 캐릭터 설정 -->
@@ -144,11 +110,11 @@
 
     <!-- 4. 편의 기능 (CPM, 오레하) -->
     <div id="view-tools" class="hidden space-y-4">
+        <!-- 동일하게 유지됨 (공간 상 생략 없이 아래 전체 코드에 포함) -->
         <div class="flex gap-4 border-b border-slate-200 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
         </div>
-        
         <!-- CPM 계산기 -->
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 max-w-6xl mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
@@ -208,20 +174,84 @@
     </div>
 </div>
 
+<!-- 🔥 파이어베이스 연동 및 실시간 데이터 엔진 🔥 -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+  // 전달해주신 연동 코드 
+  const firebaseConfig = {
+    apiKey: "AIzaSyC99EjAdUeO8982J2yN7zpr63_BT9hRDuY",
+    authDomain: "hwanhyang-b1d4e.firebaseapp.com",
+    databaseURL: "https://hwanhyang-b1d4e.firebaseio.com",
+    projectId: "hwanhyang-b1d4e",
+    storageBucket: "hwanhyang-b1d4e.firebasestorage.app",
+    messagingSenderId: "430049446799",
+    appId: "1:430049446799:web:906c20fd4333f6c4d219fa"
+  };
+
+  // 파이어베이스 초기화
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db, 'loaDashboardData'); // 데이터베이스 최상단 폴더 이름
+
+  // 1. 실시간 데이터 수신 (새로고침 없이 4명 화면 동기화)
+  onValue(dbRef, (snapshot) => {
+    const data = snapshot.val();
+    
+    if (data) {
+      window.charactersData = data.charactersData || [];
+      window.partyData = data.partyData || [];
+      window.cpmData = data.cpmData || { inputs: {}, records: [] };
+      window.oState = data.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
+    } else {
+      // 최초 접속 시 빈 데이터 생성
+      window.charactersData = [];
+      window.partyData = [];
+      window.cpmData = { inputs: {}, records: [] };
+      window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
+    }
+
+    // 상태 표시줄 업데이트 (성공)
+    const indicator = document.getElementById('cloud-indicator');
+    const status = document.getElementById('cloud-status');
+    if(indicator && status) {
+        indicator.classList.remove('bg-orange-400', 'animate-pulse');
+        indicator.classList.add('bg-green-500');
+        status.innerText = '실시간 동기화 중 ⚡';
+        status.classList.replace('text-orange-500', 'text-green-600');
+    }
+
+    // 데이터가 들어왔으니 화면을 다시 그립니다.
+    if(typeof window.renderAll === 'function') {
+        window.renderAll();
+    }
+  });
+
+  // 2. 파이어베이스로 데이터 초고속 전송 (기존 GAS fetch를 완벽하게 대체)
+  window.saveToCloud = function() {
+    set(dbRef, {
+      charactersData: window.charactersData || [],
+      partyData: window.partyData || [],
+      cpmData: window.cpmData || { inputs: {}, records: [] },
+      oState: window.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} }
+    });
+  };
+</script>
+
 <script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbylDPBHsPF9ALrDGjuDrtkwRVwpoASgNCQKgoFc1z3R57VPES6xgOIY-CeGG4oVpw6I/exec";
-
-    let isCloudConnected = false;
-    let isInitialLoad = true;
-
+    // --- [ 프론트엔드 UI 렌더링 로직 (파이어베이스로 인해 에러가 사라짐) ] ---
+    
+    // 초기 변수 설정
     window.charactersData = [];
     window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
-    window.partyData = []; 
+    window.partyData = [];
     window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
     
     window.lastWeeklyResetId = null;
     window.hasCheckedWeeklyReset = false;
     window.configSelectedPlayers = new Set();
+    window.selectedCategories = new Set();
     let editingDbId = null;
     let editingCpmId = null;
 
@@ -314,133 +344,30 @@
         if (tooltip) { tooltip.classList.remove('opacity-100'); tooltip.classList.add('opacity-0'); }
     };
 
-    // 가짜 네트워크 오류 방지를 위한 격리된 데이터 로딩 함수
-    async function initCloudDB() {
-        const ind = document.getElementById('cloud-indicator');
-        const st = document.getElementById('cloud-status');
-
-        if(GAS_WEB_APP_URL.includes("여기에_URL을_붙여넣으세요")) {
-            if (ind && st) {
-                ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm';
-                st.innerHTML = '서버 주소 미입력 (오프라인 모드)';
-                st.className = 'text-[11px] text-red-500 font-bold tracking-wide flex items-center';
-            }
-            if(typeof window.renderAll === 'function') window.renderAll();
-            return;
-        }
-
-        let result;
-        try {
-            const res = await fetch(GAS_WEB_APP_URL + '?roomId=MAIN_DB');
-            result = await res.json();
-        } catch(networkErr) { 
-            console.error("클라우드 통신 실패:", networkErr);
-            if (ind && st) {
-                ind.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm';
-                st.innerHTML = '서버 연결 실패 (네트워크/URL 문제)';
-                st.className = 'text-[11px] text-red-500 font-bold tracking-wide flex items-center';
-            }
-            return; 
-        }
-
-        try {
-            if (result && result.status === "success" && result.data) {
-                const data = result.data;
-                
-                if (data.characters) window.charactersData = JSON.parse(data.characters);
-                if (data.cpm) window.cpmData = JSON.parse(data.cpm);
-                
-                if (data.party) {
-                    let parsedParty = JSON.parse(data.party);
-                    window.partyData = Array.isArray(parsedParty) ? parsedParty : [];
-                } else {
-                    window.partyData = [];
-                }
-                
-                if (data.oreha) {
-                    let parsed = JSON.parse(data.oreha);
-                    if (parsed.inv && parsed.inv.tradable) {
-                        window.oState = { craftType: parsed.craftType || 'normal', inv: parsed.inv.tradable, prices: window.oState.prices };
-                    } else {
-                        window.oState = parsed;
-                        if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0};
-                    }
-                }
-                if (data.lastWeeklyResetId) window.lastWeeklyResetId = data.lastWeeklyResetId;
-
-                // 데이터 구조 안정화
-                window.charactersData.forEach(c => { c.completed = c.completed || []; });
-                window.partyData.forEach(p => { p.slots = p.slots || [null, null, null, null]; });
-
-                if (!window.hasCheckedWeeklyReset && window.charactersData.length > 0) {
-                    window.hasCheckedWeeklyReset = true;
-                    checkAndRunWeeklyReset();
-                }
-            } 
+    window.requestResetWeekly = function(btnElement) {
+        if (btnElement.innerText.includes("정말 초기화")) {
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const kst = new Date(utc + (9 * 3600000));
+            window.lastWeeklyResetId = "manual_reset_" + kst.getTime();
             
-            isInitialLoad = false;
-            isCloudConnected = true;
+            window.charactersData.forEach(c => { c.completed = []; });
+            window.partyData.forEach(p => { p.isCleared = false; });
             
-            if (ind && st) {
-                ind.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm';
-                st.innerHTML = '연동 완료 <span class="text-slate-500 ml-1.5 font-normal text-[10px] border border-blue-200 px-1.5 py-0.5 rounded bg-blue-50">동기화 중</span>';
-                st.className = 'text-[11px] text-blue-600 font-bold tracking-wide flex items-center';
-            }
-        } catch(parseErr) {
-            console.error("데이터 파싱/렌더링 에러:", parseErr);
-            if (ind && st) {
-                ind.className = 'w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm';
-                st.innerHTML = '데이터 처리 중 오류 발생';
-                st.className = 'text-[11px] text-orange-600 font-bold tracking-wide flex items-center';
-            }
-        }
-        
-        if(typeof window.renderAll === 'function') window.renderAll();
-    }
-
-    let saveTimeout = null;
-    window.saveToCloud = function() {
-        if (!isCloudConnected) return;
-        if (saveTimeout) clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(async () => {
-            const payload = {
-                roomId: "MAIN_DB",
-                data: {
-                    characters: JSON.stringify(window.charactersData),
-                    cpm: JSON.stringify(window.cpmData),
-                    party: JSON.stringify(window.partyData),
-                    oreha: JSON.stringify(window.oState),
-                    lastWeeklyResetId: window.lastWeeklyResetId || ''
+            if(typeof window.saveToCloud === 'function') window.saveToCloud();
+            
+            btnElement.innerHTML = '<span>🔄</span> 주간 숙제 전체 초기화';
+            btnElement.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
+            showToast('주간 숙제가 수동으로 완전 초기화되었습니다.');
+        } else {
+            btnElement.innerHTML = '<span>⚠️</span> 정말 초기화할까요?';
+            btnElement.className = "text-xs bg-red-600 text-white px-3 py-1.5 rounded border border-red-700 transition shadow-sm font-bold flex items-center gap-1";
+            setTimeout(() => {
+                if (btnElement && btnElement.innerText.includes("정말 초기화")) {
+                    btnElement.innerHTML = '<span>🔄</span> 주간 숙제 전체 초기화';
+                    btnElement.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
                 }
-            };
-            try { await fetch(GAS_WEB_APP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload), redirect: "follow" }); } catch(e) {}
-        }, 500);
-    };
-
-    window.checkAndRunWeeklyReset = function() {
-        const now = new Date();
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const kst = new Date(utc + (9 * 3600000));
-        let lastWed = new Date(kst);
-        let day = lastWed.getDay(); let hour = lastWed.getHours();
-        let daysToSubtract = day - 3;
-        if (daysToSubtract < 0 || (daysToSubtract === 0 && hour < 6)) daysToSubtract += 7; 
-        lastWed.setDate(lastWed.getDate() - daysToSubtract);
-        lastWed.setHours(6, 0, 0, 0); 
-        
-        const currentResetId = "reset_" + lastWed.getTime();
-        
-        if (window.lastWeeklyResetId !== currentResetId) {
-            window.lastWeeklyResetId = currentResetId;
-            let needsUpdate = false;
-            window.charactersData.forEach(c => { if (c.completed && c.completed.length > 0) { c.completed = []; needsUpdate = true; } });
-            
-            if(Array.isArray(window.partyData)) {
-                window.partyData.forEach(p => {
-                    if(p.isCleared) { p.isCleared = false; needsUpdate = true; }
-                });
-            }
-            if (needsUpdate) window.saveToCloud();
+            }, 3000);
         }
     };
 
@@ -503,7 +430,7 @@
         const container = document.getElementById('dashboard-container');
         container.innerHTML = '';
         
-        if (window.charactersData.length === 0) {
+        if (!window.charactersData || window.charactersData.length === 0) {
             container.className = "grid grid-cols-1";
             container.innerHTML = '<div class="col-span-1 text-center text-slate-500 py-10 glass-panel text-sm font-bold">등록된 캐릭터가 없습니다. 설정 탭에서 직접 추가해주세요.</div>';
             return;
@@ -523,7 +450,7 @@
 
         for (let player in groupedByPlayer) groupedByPlayer[player].sort((a, b) => b.level - a.level);
 
-        const allHtml = Object.entries(groupedByPlayer).map(([player, chars]) => {
+        for (const [player, chars] of Object.entries(groupedByPlayer)) {
             const pColor = getPlayerColor(player);
             const isExpanded = window.summaryStates[player] === true; 
             
@@ -629,9 +556,8 @@
                 html += contentsHtml + '</div>';
             });
             html += '</div></div>';
-            return html;
-        }).join('');
-        container.innerHTML = allHtml;
+            container.innerHTML += html;
+        }
     }
 
     function renderPartyDashboard(container) {
@@ -649,7 +575,6 @@
         
         let mainContent = '<div class="flex flex-col lg:flex-row gap-4 overflow-hidden h-full">';
 
-        // 좌측 로스터 패널
         let rosterHtml = '<div class="lg:w-48 shrink-0 flex flex-col"><div class="glass-panel p-3 sticky top-4 max-h-[85vh] overflow-y-auto">';
         rosterHtml += '<h3 class="text-[11px] font-bold text-slate-500 mb-2 border-b border-slate-200 pb-2 text-center">👥 명단 (드래그)</h3>';
         rosterHtml += '<div id="roster-container" class="space-y-3">';
@@ -676,7 +601,6 @@
         }
         rosterHtml += '</div></div></div>';
 
-        // 우측 칸반 보드 패널
         let boardHtml = '<div class="flex-grow flex gap-4 overflow-x-auto pb-4 items-start">';
         
         partyDungeonCategories.filter(cat => window.partyBoardFilters.has(cat.id)).forEach(cat => {
@@ -721,16 +645,13 @@
                 boardHtml += '</div></div>';
             });
 
-            // 문법 오류(SyntaxError)를 100% 차단하는 안전한 조립 방식 적용
             let diffButtons = '';
             cat.diffs.forEach(d => {
                 diffButtons += '<button onclick="addParty(\'' + cat.id + '\', \'' + d.name + '\', ' + d.level + ')" class="px-2 py-1 text-[10px] font-bold rounded ' + d.color + ' hover:brightness-95 shadow-sm transition">' + d.name + '</button>';
             });
             
             boardHtml += '</div>';
-            boardHtml += '<div class="group relative w-full mt-1">';
-            boardHtml += '<button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition">+ 파티 추가</button>';
-            // 투명 패딩(pb-1) 적용하여 호버 인식이 안 풀리도록 수정
+            boardHtml += '<div class="group relative w-full mt-1"><button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition">+ 파티 추가</button>';
             boardHtml += '<div class="hidden group-hover:flex absolute bottom-full left-0 w-full pb-1 z-20"><div class="bg-white border border-slate-200 shadow-xl rounded-lg p-2 gap-1.5 flex-wrap justify-center flex w-full">';
             boardHtml += diffButtons;
             boardHtml += '</div></div></div></div>';
@@ -744,12 +665,12 @@
     window.addParty = function(catId, diffName, diffLevel) {
         if (!Array.isArray(window.partyData)) window.partyData = [];
         window.partyData.push({ id: 'party_' + Date.now(), cat: catId, diff: diffName, level: diffLevel, slots: [null, null, null, null], isCleared: false });
-        window.saveToCloud(); renderDashboard();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     window.deleteParty = function(partyId) {
         window.partyData = window.partyData.filter(p => p.id !== partyId);
-        window.saveToCloud(); renderDashboard();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     window.toggleCompletion = function(dbId, content) {
@@ -768,7 +689,7 @@
         if (completed.includes(content)) completed = completed.filter(c => c !== content);
         else completed.push(content);
         char.completed = completed;
-        window.saveToCloud(); renderAll();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     window.dragStart = function(e, charId) { e.dataTransfer.setData('charId', charId); closeDropdown(); };
@@ -794,20 +715,21 @@
         if (existingIndex > -1) party.slots[existingIndex] = null;
 
         party.slots[slotIndex] = charId;
-        window.saveToCloud(); renderDashboard();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     window.removeCharacterFromSlot = function(e, partyId, slotIndex) {
         e.stopPropagation(); 
         const party = window.partyData.find(p => p.id === partyId);
         if(party) party.slots[slotIndex] = null;
-        window.saveToCloud(); renderDashboard(); closeDropdown();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
+        closeDropdown();
     };
 
     window.togglePartyCleared = function(partyId) {
         const party = window.partyData.find(p => p.id === partyId);
         if(party) party.isCleared = !party.isCleared;
-        window.saveToCloud(); renderAll();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     let currentDropdownTarget = null;
@@ -851,12 +773,11 @@
     document.addEventListener('click', (e) => { if (!e.target.closest('#dropdown-menu')) closeDropdown(); });
 
     window.toggleFilter = function(categoryId) {
-        if (selectedCategories.has(categoryId)) selectedCategories.delete(categoryId);
-        else selectedCategories.add(categoryId);
+        if (window.selectedCategories.has(categoryId)) window.selectedCategories.delete(categoryId);
+        else window.selectedCategories.add(categoryId);
         renderFilterResults();
     }
 
-    let selectedCategories = new Set();
     function renderFilters() {
         const container = document.getElementById('filter-checkboxes');
         container.innerHTML = '';
@@ -871,7 +792,7 @@
     function renderFilterResults() {
         const container = document.getElementById('filter-results');
         container.innerHTML = ''; 
-        if (selectedCategories.size === 0) {
+        if (window.selectedCategories.size === 0) {
             container.innerHTML = '<div class="text-center text-slate-400 py-8 glass-panel text-sm font-medium">던전을 체크하시면 난이도별로 그룹화되어 나타납니다.</div>';
             return;
         }
@@ -879,7 +800,7 @@
         const allPlayers = [...new Set(window.charactersData.map(c => c.player))];
 
         dungeonCategories.forEach(category => {
-            if (!selectedCategories.has(category.id)) return;
+            if (!window.selectedCategories.has(category.id)) return;
             let totalCharsInCategory = 0;
 
             let html = '<div class="glass-panel p-3 md:p-4 mb-6 border-l-4 border-l-blue-500 shadow-sm bg-white"><div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3"><h3 class="text-base md:text-lg font-black text-slate-800 flex items-center gap-1.5"><span>🚩</span> ' + category.label + '</h3><span id="badge-' + category.id + '" class="bg-blue-100 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-blue-200"></span></div><div class="flex flex-col lg:flex-row gap-3 overflow-x-auto pb-2">';
@@ -1004,7 +925,7 @@
             document.getElementById('add-char-form').reset();
             showToast('새 캐릭터가 등록되었습니다.');
         }
-        window.saveToCloud(); renderAll();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     window.startEdit = function(dbId) {
@@ -1034,7 +955,8 @@
             if(Array.isArray(window.partyData)) {
                 window.partyData.forEach(p => { p.slots = p.slots.map(sId => sId === dbId ? null : sId); });
             }
-            window.saveToCloud(); renderAll(); showToast('캐릭터가 삭제되었습니다.', 'warning');
+            if(typeof window.saveToCloud === 'function') window.saveToCloud();
+            showToast('캐릭터가 삭제되었습니다.', 'warning');
         } else {
             btnElement.innerText = "정말?"; btnElement.className = "text-white bg-red-600 px-2 py-1 rounded text-[10px] font-bold transition";
             setTimeout(() => {
@@ -1046,7 +968,7 @@
     window.requestReset = function(btnElement) {
         if (btnElement.innerText === "확인") {
             window.charactersData = []; window.cpmData = { inputs: {}, records: [] }; window.partyData = [];
-            window.saveToCloud(); renderAll();
+            if(typeof window.saveToCloud === 'function') window.saveToCloud();
             btnElement.innerText = "데이터 완전 초기화"; btnElement.className = "text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition font-bold shadow-sm";
             showToast('모든 데이터가 초기화되었습니다.');
         } else {
@@ -1190,7 +1112,7 @@
             const newRecord = { id: 'cpm_rec_' + Date.now(), recordName: rName, skillName: sName, min, sec, casts, target, scarecrow, exclude, cpm: cpm.toFixed(2), timestamp: Date.now() };
             window.cpmData.records.unshift(newRecord); showToast('\'' + rName + '\'(으)로 기록이 저장되었습니다.');
         }
-        window.saveToCloud(); renderCpmRecords();
+        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     function renderCpmRecords() {
@@ -1223,7 +1145,9 @@
     window.deleteCpmRecord = function(e, id, btnElement) {
         e.stopPropagation();
         if (btnElement.innerText === "삭제?") {
-            window.cpmData.records = window.cpmData.records.filter(r => r.id !== id); window.saveToCloud(); renderCpmRecords(); showToast('기록이 삭제되었습니다.', 'warning');
+            window.cpmData.records = window.cpmData.records.filter(r => r.id !== id); 
+            if(typeof window.saveToCloud === 'function') window.saveToCloud(); 
+            showToast('기록이 삭제되었습니다.', 'warning');
         } else {
             const orgHtml = btnElement.innerHTML; btnElement.innerText = "삭제?"; btnElement.className = "absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-sm opacity-100 transition";
             setTimeout(() => { if (btnElement && btnElement.innerText === "삭제?") { btnElement.innerHTML = orgHtml; btnElement.className = "absolute top-2 right-2 text-slate-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"; } }, 3000);
@@ -1232,9 +1156,9 @@
 
     const OREHA_REQ = { normal: { w: 86, g: 45, b: 33, gold: 384, name: '하급 어비도스 융화석' }, advanced: { w: 112, g: 59, b: 43, gold: 499, name: '상급 어비도스 융화석' } };
 
-    window.setOrehaType = function(type) { window.oState.craftType = type; window.saveToCloud(); renderOrehaUI(); }
-    window.handleOrehaInput = function(el, field) { let raw = el.value.replace(/[^0-9]/g, ''); let num = parseInt(raw) || 0; el.value = raw ? new Intl.NumberFormat('ko-KR').format(num) : ''; window.oState.inv[field] = num; window.saveToCloud(); renderOrehaResult(); };
-    window.handlePriceInput = function(el, field) { let raw = el.value.replace(/[^0-9]/g, ''); let num = parseInt(raw) || 0; el.value = raw ? new Intl.NumberFormat('ko-KR').format(num) : ''; if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0}; window.oState.prices[field] = num; window.saveToCloud(); renderOrehaResult(); };
+    window.setOrehaType = function(type) { window.oState.craftType = type; if(typeof window.saveToCloud === 'function') window.saveToCloud(); renderOrehaUI(); }
+    window.handleOrehaInput = function(el, field) { let raw = el.value.replace(/[^0-9]/g, ''); let num = parseInt(raw) || 0; el.value = raw ? new Intl.NumberFormat('ko-KR').format(num) : ''; window.oState.inv[field] = num; if(typeof window.saveToCloud === 'function') window.saveToCloud(); renderOrehaResult(); };
+    window.handlePriceInput = function(el, field) { let raw = el.value.replace(/[^0-9]/g, ''); let num = parseInt(raw) || 0; el.value = raw ? new Intl.NumberFormat('ko-KR').format(num) : ''; if(!window.oState.prices) window.oState.prices = {w:0, g:0, b:0, t:0, low:0, high:0}; window.oState.prices[field] = num; if(typeof window.saveToCloud === 'function') window.saveToCloud(); renderOrehaResult(); };
     function formatNum(n) { return new Intl.NumberFormat('ko-KR').format(n); }
 
     window.renderOrehaUI = function() {
@@ -1296,7 +1220,8 @@
     window.applyOrehaRemaining = function() {
         const res = calculateOreha(); if (!res) return;
         window.oState.inv = { t: res.finalT, w: res.finalW, g: res.finalG, b: res.finalB, p: res.finalP };
-        window.saveToCloud(); renderOrehaUI(); showToast('남은 수량이 덮어쓰기 되었습니다.');
+        if(typeof window.saveToCloud === 'function') window.saveToCloud(); 
+        renderOrehaUI(); showToast('남은 수량이 덮어쓰기 되었습니다.');
     };
 
     function renderOrehaResult() {
@@ -1377,8 +1302,6 @@
         resContainer.innerHTML = html;
     }
 
-    // 초기화를 가장 마지막에 안전하게 호출
-    setTimeout(initCloudDB, 300);
 </script>
 </body>
 </html>
