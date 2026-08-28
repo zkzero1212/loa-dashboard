@@ -36,14 +36,12 @@
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-white border border-slate-200 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-<!-- 파티 배정 드롭다운 메뉴 -->
 <div id="dropdown-menu" class="hidden fixed bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden text-sm min-w-[150px]">
     <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 font-bold text-slate-600 text-[11px]">캐릭터 선택</div>
     <ul id="dropdown-list" class="max-h-60 overflow-y-auto"></ul>
 </div>
 
 <div class="max-w-[95%] mx-auto space-y-5 pb-10">
-    <!-- 상태 표시줄 -->
     <div class="flex justify-end items-center gap-2 mb-1">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse"></span>
         <span id="cloud-status" class="text-[11px] text-orange-500 font-bold tracking-wide">클라우드 연결 중...</span>
@@ -61,7 +59,6 @@
         <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
-    <!-- 1. 대시보드 -->
     <div id="view-dashboard" class="space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
             <div>
@@ -80,7 +77,6 @@
         <div id="dashboard-container"></div>
     </div>
 
-    <!-- 2. 파티 필터 검색 -->
     <div id="view-filter" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm">
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
@@ -91,7 +87,6 @@
         </div>
     </div>
 
-    <!-- 3. 캐릭터 설정 -->
     <div id="view-config" class="hidden space-y-4">
         <div class="glass-panel p-4 shadow-sm border-l-4 border-l-green-500" id="form-panel">
             <h2 id="form-title" class="text-base font-bold mb-3 text-slate-800 flex items-center gap-2"><span>➕</span> 캐릭터 등록 / 수정 (자동 계산)</h2>
@@ -108,9 +103,7 @@
         </div>
     </div>
 
-    <!-- 4. 편의 기능 (CPM, 오레하) -->
     <div id="view-tools" class="hidden space-y-4">
-        <!-- 동일하게 유지됨 (공간 상 생략 없이 아래 전체 코드에 포함) -->
         <div class="flex gap-4 border-b border-slate-200 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
@@ -612,7 +605,6 @@
                 boardHtml += '<label class="flex items-center cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + checkedAttr + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label></div></div>';
                 boardHtml += '<div class="grid grid-cols-1 gap-1.5">';
                 
-                // 빈 문자열("")로 채워진 4칸 슬롯 보장 
                 if (!pData.slots) pData.slots = ["", "", "", ""];
                 while (pData.slots.length < 4) pData.slots.push("");
 
@@ -629,7 +621,6 @@
                         boardHtml += '<div class="flex items-center gap-1"><span class="text-[9px] text-slate-400">' + char.level + '</span>';
                         boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-300 hover:text-red-500 font-bold transition px-1 text-[10px]">✕</button></div></div>';
                     } else {
-                        // 잘못된 ID가 남아있다면 빈 문자열로 즉시 초기화
                         if (slotCharId) pData.slots[i] = "";
                         boardHtml += '<div class="slot-droppable rounded p-2 text-center text-[10px] font-bold text-slate-400 cursor-pointer hover:bg-slate-50 transition flex items-center justify-center gap-1" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, \'' + pData.id + '\', ' + i + ')" onclick="openDropdown(event, \'' + pData.id + '\', ' + i + ')"><span>+</span> 빈자리</div>';
                     }
@@ -684,14 +675,38 @@
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
-    window.dragStart = function(e, charId) { e.dataTransfer.setData('charId', charId); closeDropdown(); };
-    window.allowDrop = function(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
-    window.dragLeave = function(e) { e.currentTarget.classList.remove('drag-over'); };
-    window.drop = function(e, partyId, slotIndex) {
-        e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-        const charId = e.dataTransfer.getData('charId');
-        if (charId) assignCharacterToSlot(charId, partyId, slotIndex);
+    // --- [ 🚨 드래그 앤 드롭 완벽 방어 코드 교체 (웨일, 크롬 등 모든 브라우저 지원) ] ---
+    window.dragStart = function(e, charId) { 
+        e.dataTransfer.effectAllowed = 'copyMove'; 
+        // 웨일 브라우저 등에서 임의의 키(charId)를 차단하는 것을 막기 위해 국제 웹 표준 규격인 text/plain 으로 변경
+        e.dataTransfer.setData('text/plain', charId); 
+        closeDropdown(); 
     };
+    
+    window.allowDrop = function(e) { 
+        e.preventDefault(); 
+        e.currentTarget.classList.add('drag-over'); 
+    };
+    
+    window.dragLeave = function(e) { 
+        e.currentTarget.classList.remove('drag-over'); 
+    };
+    
+    window.drop = function(e, partyId, slotIndex) {
+        e.preventDefault(); 
+        e.currentTarget.classList.remove('drag-over');
+        
+        // 표준 규격으로 데이터를 받아옵니다.
+        let charId = e.dataTransfer.getData('text/plain');
+        if (!charId) charId = e.dataTransfer.getData('Text'); // 구형 브라우저 대응
+        
+        if (charId) {
+            assignCharacterToSlot(charId, partyId, slotIndex);
+        } else {
+            showToast('데이터를 가져오지 못했습니다. 클릭하여 드롭다운으로 추가해 보세요.', 'warning');
+        }
+    };
+    // -------------------------------------------------------------------------
 
     window.assignCharacterToSlot = function(charId, partyId, slotIndex) {
         const char = window.charactersData.find(c => c.dbId === charId);
@@ -1276,7 +1291,7 @@
         if (diff !== 0 && sellRawProfit > 0 && expectedOrehas > 0) {
             let msg = diff > 0 
                 ? '제작해서 파는 것이 <span class="text-green-600 font-bold">' + formatNum(Math.floor(diff)) + ' 골드</span> 더 이득입니다.'
-                : '재료를 그냥 파는 창고에 <span class="text-red-500 font-bold">' + formatNum(Math.floor(Math.abs(diff))) + ' 골드</span> 더 이득입니다.';
+                : '재료를 그냥 파는 것이 <span class="text-red-500 font-bold">' + formatNum(Math.floor(Math.abs(diff))) + ' 골드</span> 더 이득입니다.';
             conclusionBox = '<div class="text-center mt-1 p-2 rounded bg-white border border-slate-200 text-xs shadow-sm">' + msg + '</div>';
         }
 
