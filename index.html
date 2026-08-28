@@ -43,7 +43,7 @@
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
 <div id="dropdown-menu" class="hidden fixed bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden text-sm min-w-[150px]">
-    <div class="bg-slate-50 border-b border-slate-200 px-3 py-2 font-bold text-slate-600 text-[11px]">캐릭터 선택</div>
+    <div id="dropdown-header" class="bg-slate-50 border-b border-slate-200 px-3 py-2 font-bold text-slate-600 text-[11px]">캐릭터 선택</div>
     <ul id="dropdown-list" class="max-h-60 overflow-y-auto"></ul>
 </div>
 
@@ -120,7 +120,7 @@
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
-                    <div class="mb-5"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2><p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟 세를 입력하면 CPM을 계산합니다.</p></div>
+                    <div class="mb-5"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2><p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟수를 입력하면 CPM을 계산합니다.</p></div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1">기록명 (선택)</label><input type="text" id="cpm-record-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 하르둠 2관 1트"></div>
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1">스킬 또는 사이클명 (선택)</label><input type="text" id="cpm-skill-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 버스트, 낙화, 종언의 빛"></div>
@@ -638,7 +638,7 @@
           return acc;
       }, {});
 
-      // 명단(로스터) 렌더링 - 블록형 UI로 수정 적용
+      // 명단(로스터) 렌더링 - 블록형 UI 적용
       for (let player in grouped) {
           grouped[player].sort((a, b) => b.level - a.level);
           const pColor = getPlayerColor(player);
@@ -669,12 +669,13 @@
       }
       rosterHtml += '</div></div></div>';
 
-      let boardHtml = '<div class="flex-grow flex gap-2.5 xl:gap-3 overflow-x-auto pb-4 items-start">';
+      let boardHtml = '<div class="flex-grow flex gap-3 xl:gap-4 overflow-x-auto pb-4 items-start h-full">';
       
       partyDungeonCategories.filter(cat => window.partyBoardFilters.has(cat.id)).forEach(cat => {
-          boardHtml += '<div class="w-[210px] xl:w-[230px] shrink-0 flex flex-col gap-2.5">';
-          boardHtml += '<div class="bg-slate-200/60 py-2 text-center font-black text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm">' + cat.name + '</div>';
-          boardHtml += `<div id="party-list-container-${cat.id}" class="flex flex-col gap-2.5 min-h-[50px]">`;
+          // 열(Column) 구분감 적용: 배경색, 테두리, 라운드 적용
+          boardHtml += '<div class="w-[220px] xl:w-[240px] shrink-0 flex flex-col gap-2.5 bg-slate-100/70 border border-slate-200 rounded-xl p-2 md:p-2.5 shadow-inner min-h-[70vh]">';
+          boardHtml += '<div class="bg-white py-2 text-center font-black text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm">' + cat.name + '</div>';
+          boardHtml += `<div id="party-list-container-${cat.id}" class="flex flex-col gap-2.5 flex-grow pb-2">`;
           
           const catParties = window.partyData.filter(p => p.cat === cat.id);
           catParties.forEach(pData => {
@@ -685,7 +686,9 @@
               boardHtml += `<div id="party-box-${pData.id}" onclick="toggleHighlight(event, '${pData.id}')" class="party-box-element glass-panel p-2 xl:p-2.5 transition-all relative group cursor-pointer ${completedCls}">`;
               
               boardHtml += `<div class="flex justify-between items-start mb-2.5 border-b border-slate-100 pb-2 cursor-move" draggable="true" ondragstart="dragStartPartyBox(event, '${pData.id}', '${cat.id}')" ondragover="allowDropPartyBox(event)" ondrop="dropPartyBox(event, '${pData.id}', '${cat.id}')">`;
-              boardHtml += '<div class="flex items-center gap-1.5"><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ' + diffInfo.color + ' pointer-events-none">' + pData.diff + '</span></div>';
+              
+              // 파티박스 난이도 변경 버튼
+              boardHtml += `<div class="flex items-center gap-1.5"><button onclick="openDiffDropdown(event, '${pData.id}', '${cat.id}')" class="text-[10px] font-bold px-1.5 py-0.5 rounded ${diffInfo.color} hover:brightness-95 hover:shadow-md transition flex items-center gap-1 cursor-pointer pointer-events-auto" title="난이도 변경">${pData.diff} <span class="text-[7px] opacity-60">▼</span></button></div>`;
               
               boardHtml += '<div class="flex items-center gap-1.5"><span class="text-[10px] text-slate-400 font-bold pointer-events-none">Lv.' + pData.level + '</span>';
               boardHtml += '<label class="flex items-center cursor-pointer pointer-events-auto" onclick="event.stopPropagation()"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + checkedAttr + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label>';
@@ -730,7 +733,8 @@
           });
           
           boardHtml += '</div>';
-          boardHtml += '<div class="group relative w-full mt-0.5"><button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition">+ 파티 추가</button>';
+          // 열의 가장 아래에 붙는 새 파티 추가 버튼
+          boardHtml += '<div class="group relative w-full mt-auto pt-1"><button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-white hover:text-slate-600 hover:border-slate-400 hover:shadow-sm transition bg-white/40">+ 파티 추가</button>';
           boardHtml += '<div class="hidden group-hover:flex absolute bottom-full left-0 w-full pb-1 z-20"><div class="bg-white border border-slate-200 shadow-xl rounded-lg p-1.5 gap-1 flex-wrap justify-center flex w-full">';
           boardHtml += diffButtons;
           boardHtml += '</div></div></div></div>';
@@ -899,9 +903,16 @@
       const party = window.partyData.find(p => p.id === partyId);
       if(!party) return;
       
+      // ✅ 드롭박스 클릭 시 파티 하이라이트 켜기
+      window.activeHighlightPartyId = partyId;
+      if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
+      
       const rect = e.currentTarget.getBoundingClientRect();
       const menu = document.getElementById('dropdown-menu');
       const list = document.getElementById('dropdown-list');
+      const header = document.getElementById('dropdown-header');
+      
+      if(header) header.innerText = '캐릭터 배정';
       list.innerHTML = '';
       currentDropdownTarget = { partyId, slotIndex };
 
@@ -949,6 +960,82 @@
       }
       menu.style.top = topPos + 'px'; 
       menu.style.left = leftPos + 'px';
+  };
+
+  // 난이도 변경 드롭다운 함수 추가
+  window.openDiffDropdown = function(e, partyId, catId) {
+      e.stopPropagation();
+      
+      // ✅ 난이도 드롭박스 클릭 시에도 파티 하이라이트 켜기
+      window.activeHighlightPartyId = partyId;
+      if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
+      
+      const party = window.partyData.find(p => p.id === partyId);
+      if(!party) return;
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menu = document.getElementById('dropdown-menu');
+      const list = document.getElementById('dropdown-list');
+      const header = document.getElementById('dropdown-header');
+      
+      if(header) header.innerText = '난이도 변경';
+      list.innerHTML = '';
+      currentDropdownTarget = { partyId, type: 'diff' };
+
+      const cat = partyDungeonCategories.find(c => c.id === catId);
+      if(!cat) return;
+
+      cat.diffs.forEach(d => {
+          const li = document.createElement('li');
+          li.className = "px-3 py-2 hover:bg-slate-100 cursor-pointer border-b border-slate-100 last:border-0 flex justify-between items-center transition";
+          
+          const isCurrent = party.diff === d.name;
+          const checkIcon = isCurrent ? '<span class="text-blue-500 text-[10px] mr-1">✔️</span>' : '<span class="w-[14px] inline-block mr-1"></span>';
+          
+          li.innerHTML = `<div class="flex items-center">${checkIcon}<span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${d.color}">${d.name}</span></div><span class="text-[10px] text-slate-400 font-medium ml-2">Lv.${d.level}</span>`;
+          li.onclick = () => { window.changePartyDifficulty(partyId, d.name, d.level); window.closeDropdown(); };
+          list.appendChild(li);
+      });
+
+      menu.style.display = 'block'; 
+      let topPos = rect.bottom + 5; 
+      let leftPos = rect.left;
+      
+      if (topPos + menu.offsetHeight > window.innerHeight) {
+          topPos = rect.top - menu.offsetHeight - 5;
+      }
+      if (leftPos + menu.offsetWidth > window.innerWidth) {
+          leftPos = window.innerWidth - menu.offsetWidth - 10;
+      }
+      menu.style.top = topPos + 'px'; 
+      menu.style.left = leftPos + 'px';
+  };
+
+  // 파티 난이도 변경 처리 함수
+  window.changePartyDifficulty = function(partyId, newDiff, newLevel) {
+      const party = window.partyData.find(p => p.id === partyId);
+      if(party) {
+          party.diff = newDiff;
+          party.level = newLevel;
+          
+          let removed = false;
+          if(party.slots) {
+              party.slots.forEach((sId, idx) => {
+                  if(sId) {
+                      const c = window.charactersData.find(char => char.dbId === sId);
+                      if(c && c.level < newLevel) {
+                          party.slots[idx] = "";
+                          removed = true;
+                      }
+                  }
+              });
+          }
+
+          if(typeof window.saveToCloud === 'function') window.saveToCloud();
+          window.renderDashboard();
+          if (removed) window.showToast('입장 레벨이 부족한 캐릭터가 파티에서 자동 제외되었습니다.', 'warning');
+          else window.showToast('파티 난이도가 변경되었습니다.');
+      }
   };
 
   window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
