@@ -179,7 +179,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
-  // 전달해주신 연동 코드 
   const firebaseConfig = {
     apiKey: "AIzaSyC99EjAdUeO8982J2yN7zpr63_BT9hRDuY",
     authDomain: "hwanhyang-b1d4e.firebaseapp.com",
@@ -190,12 +189,10 @@
     appId: "1:430049446799:web:906c20fd4333f6c4d219fa"
   };
 
-  // 파이어베이스 초기화
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-  const dbRef = ref(db, 'loaDashboardData'); // 데이터베이스 최상단 폴더 이름
+  const dbRef = ref(db, 'loaDashboardData');
 
-  // 1. 실시간 데이터 수신 (새로고침 없이 4명 화면 동기화)
   onValue(dbRef, (snapshot) => {
     const data = snapshot.val();
     
@@ -205,14 +202,12 @@
       window.cpmData = data.cpmData || { inputs: {}, records: [] };
       window.oState = data.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
     } else {
-      // 최초 접속 시 빈 데이터 생성
       window.charactersData = [];
       window.partyData = [];
       window.cpmData = { inputs: {}, records: [] };
       window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
     }
 
-    // 상태 표시줄 업데이트 (성공)
     const indicator = document.getElementById('cloud-indicator');
     const status = document.getElementById('cloud-status');
     if(indicator && status) {
@@ -222,13 +217,11 @@
         status.classList.replace('text-orange-500', 'text-green-600');
     }
 
-    // 데이터가 들어왔으니 화면을 다시 그립니다.
     if(typeof window.renderAll === 'function') {
         window.renderAll();
     }
   });
 
-  // 2. 파이어베이스로 데이터 초고속 전송 (기존 GAS fetch를 완벽하게 대체)
   window.saveToCloud = function() {
     set(dbRef, {
       charactersData: window.charactersData || [],
@@ -240,9 +233,6 @@
 </script>
 
 <script>
-    // --- [ 프론트엔드 UI 렌더링 로직 (파이어베이스로 인해 에러가 사라짐) ] ---
-    
-    // 초기 변수 설정
     window.charactersData = [];
     window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
     window.partyData = [];
@@ -374,7 +364,7 @@
     window.isCharClearedDungeon = function(char, fullDiffStr) {
         if (char.completed && char.completed.includes(fullDiffStr)) return true;
         if (Array.isArray(window.partyData)) {
-            return window.partyData.some(p => (p.cat + p.diff) === fullDiffStr && p.isCleared && p.slots.includes(char.dbId));
+            return window.partyData.some(p => (p.cat + p.diff) === fullDiffStr && p.isCleared && p.slots && p.slots.includes(char.dbId));
         }
         return false;
     };
@@ -622,23 +612,25 @@
                 boardHtml += '<label class="flex items-center cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + checkedAttr + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label></div></div>';
                 boardHtml += '<div class="grid grid-cols-1 gap-1.5">';
                 
+                // 빈 문자열("")로 채워진 4칸 슬롯 보장 
+                if (!pData.slots) pData.slots = ["", "", "", ""];
+                while (pData.slots.length < 4) pData.slots.push("");
+
                 for (let i = 0; i < 4; i++) {
                     const slotCharId = pData.slots[i];
-                    if (slotCharId) {
-                        const char = window.charactersData.find(c => c.dbId === slotCharId);
-                        if (char) {
-                            const pColor = getPlayerColor(char.player);
-                            const isSupp = supporters.includes(char.name);
-                            boardHtml += '<div class="flex items-center justify-between p-2 rounded border border-slate-200 bg-white shadow-sm"><div class="flex items-center gap-1.5">';
-                            boardHtml += '<span class="text-[9px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1 py-0.5 rounded">' + char.player + '</span>';
-                            boardHtml += '<span class="text-[11px] font-bold text-slate-700">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span></div>';
-                            boardHtml += '<div class="flex items-center gap-1"><span class="text-[9px] text-slate-400">' + char.level + '</span>';
-                            boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-300 hover:text-red-500 font-bold transition px-1 text-[10px]">✕</button></div></div>';
-                        } else {
-                            pData.slots[i] = null;
-                            i--;
-                        }
+                    const char = (slotCharId && slotCharId !== "") ? window.charactersData.find(c => c.dbId === slotCharId) : null;
+                    
+                    if (char) {
+                        const pColor = getPlayerColor(char.player);
+                        const isSupp = supporters.includes(char.name);
+                        boardHtml += '<div class="flex items-center justify-between p-2 rounded border border-slate-200 bg-white shadow-sm"><div class="flex items-center gap-1.5">';
+                        boardHtml += '<span class="text-[9px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1 py-0.5 rounded">' + char.player + '</span>';
+                        boardHtml += '<span class="text-[11px] font-bold text-slate-700">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span></div>';
+                        boardHtml += '<div class="flex items-center gap-1"><span class="text-[9px] text-slate-400">' + char.level + '</span>';
+                        boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-300 hover:text-red-500 font-bold transition px-1 text-[10px]">✕</button></div></div>';
                     } else {
+                        // 잘못된 ID가 남아있다면 빈 문자열로 즉시 초기화
+                        if (slotCharId) pData.slots[i] = "";
                         boardHtml += '<div class="slot-droppable rounded p-2 text-center text-[10px] font-bold text-slate-400 cursor-pointer hover:bg-slate-50 transition flex items-center justify-center gap-1" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, \'' + pData.id + '\', ' + i + ')" onclick="openDropdown(event, \'' + pData.id + '\', ' + i + ')"><span>+</span> 빈자리</div>';
                     }
                 }
@@ -664,7 +656,7 @@
 
     window.addParty = function(catId, diffName, diffLevel) {
         if (!Array.isArray(window.partyData)) window.partyData = [];
-        window.partyData.push({ id: 'party_' + Date.now(), cat: catId, diff: diffName, level: diffLevel, slots: [null, null, null, null], isCleared: false });
+        window.partyData.push({ id: 'party_' + Date.now(), cat: catId, diff: diffName, level: diffLevel, slots: ["", "", "", ""], isCleared: false });
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
@@ -678,7 +670,7 @@
         if (!char) return;
 
         if (Array.isArray(window.partyData)) {
-            const clearedViaParty = window.partyData.some(p => (p.cat + p.diff) === content && p.isCleared && p.slots.includes(dbId));
+            const clearedViaParty = window.partyData.some(p => (p.cat + p.diff) === content && p.isCleared && p.slots && p.slots.includes(dbId));
             if (clearedViaParty) {
                 showToast('파티 단위로 클리어 된 내역이 있어 개별 상태를 변경할 수 없습니다.', 'warning');
                 return;
@@ -707,12 +699,14 @@
         if (!char || !party) return;
         if (char.level < party.level) { showToast('입장 레벨이 부족합니다. (' + char.level + ' / ' + party.level + ')', 'warning'); return; }
 
+        if (!party.slots) party.slots = ["", "", "", ""];
+        
         if (party.slots.includes(charId) && party.slots.indexOf(charId) !== slotIndex) {
             showToast('이미 이 파티에 배정되었습니다.', 'warning'); return;
         }
 
         const existingIndex = party.slots.indexOf(charId);
-        if (existingIndex > -1) party.slots[existingIndex] = null;
+        if (existingIndex > -1) party.slots[existingIndex] = "";
 
         party.slots[slotIndex] = charId;
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
@@ -721,7 +715,7 @@
     window.removeCharacterFromSlot = function(e, partyId, slotIndex) {
         e.stopPropagation(); 
         const party = window.partyData.find(p => p.id === partyId);
-        if(party) party.slots[slotIndex] = null;
+        if(party && party.slots) party.slots[slotIndex] = "";
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
         closeDropdown();
     };
@@ -744,7 +738,7 @@
         list.innerHTML = '';
         currentDropdownTarget = { partyId, slotIndex };
 
-        let availableChars = window.charactersData.filter(char => char.level >= party.level && !party.slots.includes(char.dbId));
+        let availableChars = window.charactersData.filter(char => char.level >= party.level && (!party.slots || !party.slots.includes(char.dbId)));
         availableChars.sort((a,b) => b.level - a.level);
 
         if (availableChars.length === 0) {
@@ -953,7 +947,9 @@
         if (btnElement.innerText === "정말?") {
             window.charactersData = window.charactersData.filter(c => c.dbId !== dbId);
             if(Array.isArray(window.partyData)) {
-                window.partyData.forEach(p => { p.slots = p.slots.map(sId => sId === dbId ? null : sId); });
+                window.partyData.forEach(p => { 
+                    if(p.slots) p.slots = p.slots.map(sId => sId === dbId ? "" : sId); 
+                });
             }
             if(typeof window.saveToCloud === 'function') window.saveToCloud();
             showToast('캐릭터가 삭제되었습니다.', 'warning');
@@ -1280,7 +1276,7 @@
         if (diff !== 0 && sellRawProfit > 0 && expectedOrehas > 0) {
             let msg = diff > 0 
                 ? '제작해서 파는 것이 <span class="text-green-600 font-bold">' + formatNum(Math.floor(diff)) + ' 골드</span> 더 이득입니다.'
-                : '재료를 그냥 파는 것이 <span class="text-red-500 font-bold">' + formatNum(Math.floor(Math.abs(diff))) + ' 골드</span> 더 이득입니다.';
+                : '재료를 그냥 파는 창고에 <span class="text-red-500 font-bold">' + formatNum(Math.floor(Math.abs(diff))) + ' 골드</span> 더 이득입니다.';
             conclusionBox = '<div class="text-center mt-1 p-2 rounded bg-white border border-slate-200 text-xs shadow-sm">' + msg + '</div>';
         }
 
