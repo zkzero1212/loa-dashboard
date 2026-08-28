@@ -269,11 +269,22 @@
       return 'text-slate-700 bg-slate-100 border-slate-300';
   }
 
+  // ★ 변경된 핵심 완료 판정 함수 (특정 난이도가 아닌 '카테고리' 단위로 클리어 여부 확인)
   window.isCharClearedDungeon = function(char, fullDiffStr) {
-      if (char.completed && char.completed.includes(fullDiffStr)) return true;
-      if (Array.isArray(window.partyData)) {
-          return window.partyData.some(p => (p.cat + p.diff) === fullDiffStr && p.isCleared && p.slots && p.slots.includes(char.dbId));
+      let catId = fullDiffStr;
+      for (const cat of dungeonCategories) {
+          if (fullDiffStr.startsWith(cat.id)) {
+              catId = cat.id;
+              break;
+          }
       }
+
+      if (char.completed && char.completed.some(c => c.startsWith(catId))) return true;
+      
+      if (Array.isArray(window.partyData)) {
+          return window.partyData.some(p => p.cat === catId && p.isCleared && p.slots && p.slots.includes(char.dbId));
+      }
+      
       return false;
   };
 
@@ -789,16 +800,40 @@
       }
   };
 
+  // ★ 변경된 뱃지 클릭(완료 토글) 함수 로직
   window.toggleCompletion = function(dbId, content) {
       const char = window.charactersData.find(c => c.dbId === dbId);
       if (!char) return;
-      if (Array.isArray(window.partyData)) {
-          const clearedViaParty = window.partyData.some(p => (p.cat + p.diff) === content && p.isCleared && p.slots && p.slots.includes(dbId));
-          if (clearedViaParty) { window.showToast('파티 단위로 클리어 된 내역이 있어 개별 상태를 변경할 수 없습니다.', 'warning'); return; }
+      
+      let catId = content;
+      for (const cat of dungeonCategories) {
+          if (content.startsWith(cat.id)) {
+              catId = cat.id;
+              break;
+          }
       }
+
+      if (Array.isArray(window.partyData)) {
+          const clearedViaParty = window.partyData.some(p => p.cat === catId && p.isCleared && p.slots && p.slots.includes(dbId));
+          if (clearedViaParty) { 
+              window.showToast('파티 단위로 클리어 된 내역이 있어 개별 상태를 변경할 수 없습니다.', 'warning'); 
+              return; 
+          }
+      }
+      
       let completed = char.completed ? [...char.completed] : [];
-      if (completed.includes(content)) completed = completed.filter(c => c !== content);
-      else completed.push(content);
+      const existingIdx = completed.findIndex(c => c.startsWith(catId));
+      
+      if (existingIdx > -1) {
+          const existingContent = completed[existingIdx];
+          completed.splice(existingIdx, 1);
+          if (existingContent !== content) {
+              completed.push(content);
+          }
+      } else {
+          completed.push(content);
+      }
+      
       char.completed = completed;
       if(typeof window.saveToCloud === 'function') window.saveToCloud();
   };
