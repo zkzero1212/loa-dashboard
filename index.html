@@ -19,8 +19,13 @@
         .supporter-glow { border-left-color: #fbbf24 !important; border-left-width: 4px !important; background: linear-gradient(90deg, rgba(253,230,138,0.2) 0%, rgba(255,255,255,1) 100%) !important; }
         .slot-droppable { border: 2px dashed #cbd5e1; transition: all 0.2s; }
         .slot-droppable.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
-        /* 💡 완료된 파티 더 짙고 어둡게 처리 */
         .party-completed { opacity: 0.25; filter: grayscale(100%) brightness(0.9); transition: all 0.3s; }
+        
+        /* 💡 추가된 로스터 하이라이트 기능 시각 효과 */
+        .roster-dimmed { opacity: 0.2 !important; filter: grayscale(100%) !important; transition: all 0.3s; pointer-events: none; }
+        .roster-highlight { outline: 2px solid #3b82f6; outline-offset: 1px; transform: scale(1.03); z-index: 10; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.2s; }
+        .party-box-highlight { outline: 2px solid #3b82f6; outline-offset: 1px; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.15); }
+        
         ::-webkit-scrollbar { width: 8px; height: 10px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -243,6 +248,9 @@
     window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
     window.appState = { title: '💻 로스트아크 클라우드 대시보드' };
     
+    // 💡 하이라이트 기능을 위한 전역 변수
+    window.activeHighlightPartyId = null;
+
     window.lastWeeklyResetId = null;
     window.hasCheckedWeeklyReset = false;
     window.configSelectedPlayers = new Set();
@@ -302,6 +310,67 @@
         if (diff.includes('1단')) return 'text-green-700 bg-green-100 border-green-300 hover:bg-green-200';
         return 'text-slate-700 bg-slate-100 border-slate-300';
     }
+
+    // 💡 [로스터 하이라이트 기능 구현]
+    window.toggleHighlight = function(e, partyId) {
+        if (e && e.target) {
+            const tag = e.target.tagName.toLowerCase();
+            if (tag === 'button' || tag === 'input' || (tag === 'span' && e.target.onclick)) return;
+            if (e.target.closest('button') || e.target.closest('input')) return;
+        }
+
+        if (window.activeHighlightPartyId === partyId) {
+            window.activeHighlightPartyId = null;
+        } else {
+            window.activeHighlightPartyId = partyId;
+        }
+        updateHighlightDOM();
+    };
+
+    window.updateHighlightDOM = function() {
+        const partyId = window.activeHighlightPartyId;
+        
+        document.querySelectorAll('.party-box-element').forEach(el => {
+            if (partyId && el.id === 'party-box-' + partyId) {
+                el.classList.add('party-box-highlight');
+            } else {
+                el.classList.remove('party-box-highlight');
+            }
+        });
+
+        document.querySelectorAll('.roster-char-element').forEach(el => {
+            el.classList.remove('roster-dimmed', 'roster-highlight');
+            
+            if (partyId) {
+                const charId = el.getAttribute('data-char-id');
+                const char = window.charactersData.find(c => c.dbId === charId);
+                const party = window.partyData.find(p => p.id === partyId);
+                
+                if (char && party && isCharEligibleForParty(char, party)) {
+                    el.classList.add('roster-highlight');
+                } else {
+                    el.classList.add('roster-dimmed');
+                }
+            }
+        });
+    };
+
+    window.isCharEligibleForParty = function(char, party) {
+        if (char.level < party.level) return false;
+        if (party.slots && party.slots.includes(char.dbId)) return false;
+        
+        const inOtherParty = window.partyData.some(p => p.cat === party.cat && p.id !== party.id && p.slots && p.slots.includes(char.dbId));
+        if (inOtherParty) return false;
+        
+        const playerInThisParty = party.slots.some((sId) => {
+            if (!sId) return false;
+            const c = window.charactersData.find(x => x.dbId === sId);
+            return c && c.player === char.player;
+        });
+        if (playerInThisParty) return false;
+
+        return true;
+    };
 
     window.editAppTitle = function() {
         const currentTitle = window.appState ? window.appState.title : '💻 로스트아크 클라우드 대시보드';
@@ -375,14 +444,6 @@
                 }
             }, 3000);
         }
-    };
-
-    window.isCharClearedDungeon = function(char, fullDiffStr) {
-        if (char.completed && char.completed.includes(fullDiffStr)) return true;
-        if (Array.isArray(window.partyData)) {
-            return window.partyData.some(p => (p.cat + p.diff) === fullDiffStr && p.isCleared && p.slots && p.slots.includes(char.dbId));
-        }
-        return false;
     };
 
     window.renderAll = function() {
@@ -604,7 +665,8 @@
                 const opacityClass = isAllCleared ? 'opacity-40 grayscale bg-slate-50' : '';
                 const textStyle = isAllCleared ? 'line-through text-slate-400' : 'text-slate-700';
 
-                rosterHtml += '<div draggable="true" ondragstart="dragStart(event, \'' + char.dbId + '\')" class="flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition ' + borderClass + ' ' + opacityClass + '">';
+                // 💡 [로스터 HTML에 id 및 커스텀 클래스 부여]
+                rosterHtml += `<div id="roster-char-${char.dbId}" data-char-id="${char.dbId}" draggable="true" ondragstart="dragStart(event, '${char.dbId}')" class="roster-char-element flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition ${borderClass} ${opacityClass}">`;
                 rosterHtml += '<span class="text-[11px] font-bold ' + textStyle + '">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span>';
                 rosterHtml += '<span class="text-[9px] text-slate-400 font-medium ' + (isAllCleared ? 'line-through' : '') + '">' + char.level + '</span></div>';
             });
@@ -625,7 +687,8 @@
                 const completedCls = pData.isCleared ? 'party-completed' : '';
                 const checkedAttr = pData.isCleared ? 'checked' : '';
                 
-                boardHtml += '<div class="glass-panel p-2 xl:p-2.5 transition-all relative group ' + completedCls + '">';
+                // 💡 [파티 박스 HTML에 클릭 이벤트 및 id 부여]
+                boardHtml += `<div id="party-box-${pData.id}" onclick="toggleHighlight(event, '${pData.id}')" class="party-box-element glass-panel p-2 xl:p-2.5 transition-all relative group cursor-pointer ${completedCls}">`;
                 
                 boardHtml += '<div class="flex justify-between items-start mb-2.5 border-b border-slate-100 pb-2"><div class="flex items-center gap-1.5">';
                 boardHtml += '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded ' + diffInfo.color + '">' + pData.diff + '</span></div>';
@@ -649,7 +712,6 @@
                         const pColor = getPlayerColor(char.player);
                         const isSupp = supporters.includes(char.name);
                         
-                        // 💡 [클릭 시 바로 교체 드롭다운 열기 추가] onClick 이벤트 부여
                         boardHtml += '<div onclick="openDropdown(event, \'' + pData.id + '\', ' + i + ')" ';
                         boardHtml += 'draggable="true" ondragstart="dragStartFromSlot(event, \'' + char.dbId + '\', \'' + pData.id + '\', ' + i + ')" ';
                         boardHtml += 'ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, \'' + pData.id + '\', ' + i + ')" ';
@@ -658,7 +720,6 @@
                         boardHtml += '<span class="text-[9px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1.5 py-0.5 rounded leading-none flex-shrink-0">' + char.player + '</span>';
                         boardHtml += '<span class="text-[12px] font-black text-slate-800 tracking-wide truncate">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : '') + char.name + '</span></div>';
                         boardHtml += '<div class="flex items-center gap-1 flex-shrink-0"><span class="text-[9px] text-slate-400 font-medium">' + char.level + '</span>';
-                        // x버튼 이벤트 전파 방지로 삭제만 되게끔 유지
                         boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-400 hover:text-red-500 font-bold transition px-1 text-[10px] cursor-pointer">✕</button></div></div>';
                     } else {
                         if (slotCharId) pData.slots[i] = "";
@@ -683,6 +744,11 @@
         boardHtml += '</div>';
         mainContent += rosterHtml + boardHtml + '</div>';
         container.innerHTML = filterHtml + mainContent;
+
+        // 💡 렌더링 완료 후 하이라이트 상태 복구
+        setTimeout(() => {
+            if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
+        }, 0);
     }
 
     window.addParty = function(catId, diffName, diffLevel) {
@@ -693,6 +759,7 @@
 
     window.deleteParty = function(partyId) {
         window.partyData = window.partyData.filter(p => p.id !== partyId);
+        if (window.activeHighlightPartyId === partyId) window.activeHighlightPartyId = null;
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
@@ -703,25 +770,6 @@
             if(typeof window.saveToCloud === 'function') window.saveToCloud();
             showToast('파티 슬롯을 모두 비웠습니다.');
         }
-    };
-
-    window.toggleCompletion = function(dbId, content) {
-        const char = window.charactersData.find(c => c.dbId === dbId);
-        if (!char) return;
-
-        if (Array.isArray(window.partyData)) {
-            const clearedViaParty = window.partyData.some(p => (p.cat + p.diff) === content && p.isCleared && p.slots && p.slots.includes(dbId));
-            if (clearedViaParty) {
-                showToast('파티 단위로 클리어 된 내역이 있어 개별 상태를 변경할 수 없습니다.', 'warning');
-                return;
-            }
-        }
-
-        let completed = char.completed ? [...char.completed] : [];
-        if (completed.includes(content)) completed = completed.filter(c => c !== content);
-        else completed.push(content);
-        char.completed = completed;
-        if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
     window.dragStart = function(e, charId) { 
@@ -859,21 +907,19 @@
         list.innerHTML = '';
         currentDropdownTarget = { partyId, slotIndex };
 
-        // 💡 [필터링: 현재 슬롯에 들어있는 캐릭터는 덮어씌울 거니까 제외 조건에서 무시]
         let availableChars = window.charactersData.filter(char => {
             if (char.level < party.level) return false;
             
             const inThisPartyOtherSlot = party.slots.some((sId, idx) => sId === char.dbId && idx !== slotIndex);
             if (inThisPartyOtherSlot) return false;
             
-            // 현재 슬롯과 똑같은 자기 자신은 굳이 다시 덮어씌울 필요 없으니 숨김
             if (party.slots[slotIndex] === char.dbId) return false;
             
             const inOtherParty = window.partyData.some(p => p.cat === party.cat && p.id !== party.id && p.slots && p.slots.includes(char.dbId));
             if (inOtherParty) return false;
             
             const playerInThisParty = party.slots.some((sId, idx) => {
-                if (!sId || idx === slotIndex) return false; // 선택한 슬롯에 있는 캐릭터는 무시
+                if (!sId || idx === slotIndex) return false;
                 const c = window.charactersData.find(x => x.dbId === sId);
                 return c && c.player === char.player;
             });
@@ -898,16 +944,13 @@
             });
         }
 
-        // 💡 [드롭박스 위치 스마트 보정 버그 해결]
         menu.style.display = 'block'; 
         let topPos = rect.bottom + 5; 
         let leftPos = rect.left;
         
-        // 화면 하단으로 벗어나는지 체크해서 위로 올려버림
         if (rect.bottom + menu.offsetHeight + 5 > window.innerHeight) {
             topPos = rect.top - menu.offsetHeight - 5;
         }
-        // 우측으로 벗어나는지 체크해서 안으로 들이기
         if (rect.left + menu.offsetWidth > window.innerWidth) {
             leftPos = window.innerWidth - menu.offsetWidth - 10;
         }
@@ -917,7 +960,18 @@
     };
 
     window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
-    document.addEventListener('click', (e) => { if (!e.target.closest('#dropdown-menu')) closeDropdown(); });
+    
+    // 💡 [클릭 외부 감지 이벤트 병합] 드롭다운 & 하이라이트 닫기
+    document.addEventListener('click', (e) => { 
+        if (!e.target.closest('#dropdown-menu')) {
+            closeDropdown(); 
+        }
+        
+        if (window.activeHighlightPartyId && !e.target.closest('.party-box-element')) {
+            window.activeHighlightPartyId = null;
+            if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
+        }
+    });
 
     window.toggleFilter = function(categoryId) {
         if (window.selectedCategories.has(categoryId)) window.selectedCategories.delete(categoryId);
