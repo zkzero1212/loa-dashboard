@@ -120,7 +120,7 @@
         <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
-                    <div class="mb-5"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2><p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟수를 입력하면 CPM을 계산합니다.</p></div>
+                    <div class="mb-5"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2><p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟 세를 입력하면 CPM을 계산합니다.</p></div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1">기록명 (선택)</label><input type="text" id="cpm-record-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 하르둠 2관 1트"></div>
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1">스킬 또는 사이클명 (선택)</label><input type="text" id="cpm-skill-name" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-blue-500" placeholder="예: 버스트, 낙화, 종언의 빛"></div>
@@ -638,20 +638,30 @@
           return acc;
       }, {});
 
+      // 명단(로스터) 렌더링 - 블록형 UI로 수정 적용
       for (let player in grouped) {
           grouped[player].sort((a, b) => b.level - a.level);
           const pColor = getPlayerColor(player);
-          rosterHtml += '<div class="mb-2.5"><div class="text-[10px] font-black ' + pColor.text + ' mb-1 px-1 ' + pColor.bg + ' rounded text-center border ' + pColor.border + ' py-0.5">' + player + '</div><div class="flex flex-col gap-1">';
+          
+          // 전체를 감싸는 블록
+          rosterHtml += `<div class="mb-2.5 rounded-lg border ${pColor.border} overflow-hidden shadow-sm flex flex-col">`;
+          
+          // 헤더 영역
+          rosterHtml += `<div class="text-[11px] font-black ${pColor.text} ${pColor.label} px-1.5 py-1 text-center border-b ${pColor.border}">${player}</div>`;
+          
+          // 바디 영역 (플레이어 고유의 배경색 적용)
+          rosterHtml += `<div class="flex flex-col gap-1 p-1.5 ${pColor.bg}">`;
           
           grouped[player].forEach(char => {
               const isSupp = supporters.includes(char.name);
               const isAllCleared = char.contents && char.contents.length > 0 && char.contents.every(content => window.isCharClearedDungeon(char, content));
               
-              const borderClass = (isSupp && !isAllCleared) ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200';
-              const opacityClass = isAllCleared ? 'opacity-40 grayscale bg-slate-50' : '';
-              const textStyle = isAllCleared ? 'line-through text-slate-400' : 'text-slate-700';
+              // 캐릭터 박스는 배경에서 돋보이게 하얀색(완료 시 반투명)으로 처리
+              const borderClass = (isSupp && !isAllCleared) ? 'supporter-glow border-white bg-white' : 'bg-white border-white';
+              const opacityClass = isAllCleared ? 'opacity-50 grayscale !bg-white/50' : '';
+              const textStyle = isAllCleared ? 'line-through text-slate-400' : 'text-slate-800';
 
-              rosterHtml += `<div id="roster-char-${char.dbId}" data-char-id="${char.dbId}" draggable="true" ondragstart="dragStart(event, '${char.dbId}')" onclick="handleRosterClick('${char.dbId}')" class="roster-char-element flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition ${borderClass} ${opacityClass}">`;
+              rosterHtml += `<div id="roster-char-${char.dbId}" data-char-id="${char.dbId}" draggable="true" ondragstart="dragStart(event, '${char.dbId}')" onclick="handleRosterClick('${char.dbId}')" class="roster-char-element flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 hover:shadow-md transition ${borderClass} ${opacityClass}">`;
               rosterHtml += '<span class="text-[11px] font-bold ' + textStyle + '">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[9px]">✨</span>' : '') + char.name + '</span>';
               rosterHtml += '<span class="text-[9px] text-slate-400 font-medium ' + (isAllCleared ? 'line-through' : '') + '">' + char.level + '</span></div>';
           });
@@ -733,7 +743,6 @@
       setTimeout(() => { if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM(); }, 0);
   };
 
-  // 4번 요청: 원클릭 자동 파티 배정 기능
   window.handleRosterClick = function(charId) {
       if (!window.activeHighlightPartyId) return;
       const party = window.partyData.find(p => p.id === window.activeHighlightPartyId);
@@ -929,7 +938,6 @@
       }
 
       menu.style.display = 'block'; 
-      // 3번 요청: 드롭다운 메뉴 위치 수정 (스크롤 무시, viewport 절대좌표 사용)
       let topPos = rect.bottom + 5; 
       let leftPos = rect.left;
       
@@ -945,7 +953,6 @@
 
   window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
   
-  // 4번 요청 부가 조건: 로스터를 클릭했을 때는 하이라이트가 안 풀리도록 방어 처리
   document.addEventListener('click', (e) => { 
       if (!e.target.closest('#dropdown-menu')) window.closeDropdown(); 
       if (window.activeHighlightPartyId && !e.target.closest('.party-box-element') && !e.target.closest('.roster-char-element')) {
