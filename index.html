@@ -6,7 +6,7 @@
     <title>로스트아크 클라우드 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f8fafc; color: #1e293b; font-family: 'Pretendard', sans-serif; overflow-y: scroll; }
+        body { background-color: #f8fafc; color: #1e293b; font-family: 'Pretendard', sans-serif; overflow-y: scroll; overflow-x: hidden; }
         .glass-panel { background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(226, 232, 240, 1); border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .tab-btn { transition: all 0.3s; color: #475569; background-color: #ffffff; }
         .tab-btn:hover { background-color: #f1f5f9; }
@@ -31,7 +31,7 @@
         .toast-exit { animation: fadeOut 0.5s forwards; }
     </style>
 </head>
-<body class="p-3 md:p-5 min-h-screen relative">
+<body class="p-2 lg:p-4 min-h-screen relative w-full">
 
 <div id="custom-tooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 bg-white border border-slate-200 rounded-lg shadow-xl p-2 md:p-2.5 w-max transform -translate-x-1/2 -translate-y-full mt-[-8px]"></div>
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
@@ -41,35 +41,38 @@
     <ul id="dropdown-list" class="max-h-60 overflow-y-auto"></ul>
 </div>
 
-<div class="max-w-[95%] mx-auto space-y-5 pb-10">
-    <div class="flex justify-end items-center gap-2 mb-1">
+<div class="w-full mx-auto space-y-4 pb-10">
+    <div class="flex justify-end items-center gap-2 mb-1 pr-2">
         <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse"></span>
         <span id="cloud-status" class="text-[11px] text-orange-500 font-bold tracking-wide">클라우드 연결 중...</span>
     </div>
 
     <div class="text-center space-y-1.5 relative">
-        <h1 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">💻 로스트아크 클라우드 대시보드</h1>
-        <p class="text-xs md:text-sm text-slate-500">칸반 보드 기반 파티 플래너 / 와이드 뷰 지원 / 수요일 자동 리셋</p>
+        <h1 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight group flex justify-center items-center gap-2 cursor-pointer transition-transform hover:scale-[1.01]" onclick="editAppTitle()">
+            <span id="display-app-title">💻 로스트아크 클라우드 대시보드</span>
+            <span class="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity text-base" title="타이틀 변경">✏️</span>
+        </h1>
+        <p class="text-[11px] md:text-xs text-slate-500">칸반 보드 기반 파티 플래너 / 와이드 뷰 지원 / 수요일 자동 리셋</p>
     </div>
 
     <div class="flex flex-wrap justify-center gap-2 mb-4">
-        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">📊 대시보드</button>
-        <button onclick="switchTab('filter')" id="tab-filter" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm">🔍 던전 파티 검색</button>
-        <button onclick="switchTab('config')" id="tab-config" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">⚙️ 캐릭터 관리</button>
-        <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm">📊 대시보드</button>
+        <button onclick="switchTab('filter')" id="tab-filter" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm">🔍 던전 파티 검색</button>
+        <button onclick="switchTab('config')" id="tab-config" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm flex items-center gap-1">⚙️ 캐릭터 관리</button>
+        <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
-    <div id="view-dashboard" class="space-y-4">
-        <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div id="view-dashboard" class="space-y-3">
+        <div class="flex flex-col sm:flex-row justify-between items-end sm:items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
             <div>
-                <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">📋 이번 주 숙제 플래너</h2>
-                <p id="dashboard-desc" class="text-[11px] text-slate-500 mt-0.5">원하는 던전 열 아래의 <b>+ 파티 추가</b>를 눌러 파티를 짜보세요.</p>
+                <h2 class="text-sm md:text-base font-bold text-slate-800 flex items-center gap-1.5">📋 이번 주 숙제 플래너</h2>
+                <p id="dashboard-desc" class="text-[10px] md:text-[11px] text-slate-500 mt-0.5">원하는 던전 열 아래의 <b>+ 파티 추가</b>를 눌러 파티를 짜보세요.</p>
             </div>
             <div class="flex gap-2 mt-2 sm:mt-0">
-                <button id="btn-toggle-view" onclick="toggleDashboardMode()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1">
+                <button id="btn-toggle-view" onclick="toggleDashboardMode()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1">
                     <span>👤</span> 개인 숙제 보기
                 </button>
-                <button onclick="requestResetWeekly(this)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1">
+                <button onclick="requestResetWeekly(this)" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1">
                     <span>🔄</span> 주간 숙제 전체 초기화
                 </button>
             </div>
@@ -77,7 +80,7 @@
         <div id="dashboard-container"></div>
     </div>
 
-    <div id="view-filter" class="hidden space-y-4">
+    <div id="view-filter" class="hidden space-y-4 max-w-7xl mx-auto">
         <div class="glass-panel p-4 shadow-sm">
             <h2 class="text-base font-bold mb-3 text-slate-800">🔍 확인할 던전을 선택하세요 (다중 선택 가능)</h2>
             <div id="filter-checkboxes" class="flex flex-wrap gap-2"></div>
@@ -87,7 +90,7 @@
         </div>
     </div>
 
-    <div id="view-config" class="hidden space-y-4">
+    <div id="view-config" class="hidden space-y-4 max-w-7xl mx-auto">
         <div class="glass-panel p-4 shadow-sm border-l-4 border-l-green-500" id="form-panel">
             <h2 id="form-title" class="text-base font-bold mb-3 text-slate-800 flex items-center gap-2"><span>➕</span> 캐릭터 등록 / 수정 (자동 계산)</h2>
             <form id="add-char-form" onsubmit="addCharacter(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -104,13 +107,13 @@
     </div>
 
     <!-- 4. 편의 기능 -->
-    <div id="view-tools" class="hidden space-y-4">
+    <div id="view-tools" class="hidden space-y-4 max-w-7xl mx-auto">
         <div class="flex gap-4 border-b border-slate-200 pb-2 px-2">
             <button onclick="switchToolTab('cpm')" id="tool-tab-cpm" class="text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition">⏱️ CPM 계산기</button>
             <button onclick="switchToolTab('oreha')" id="tool-tab-oreha" class="text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition">💰 오레하 계산기</button>
         </div>
         <!-- CPM 계산기 -->
-        <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 max-w-6xl mx-auto">
+        <div id="tool-view-cpm" class="glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-blue-500 mx-auto">
             <div class="grid lg:grid-cols-12 gap-5 lg:gap-8">
                 <div class="lg:col-span-8 space-y-4 flex flex-col">
                     <div class="mb-5"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1">로스트아크 CPM 계산기</h2><p class="text-xs text-slate-500">전투 분석 기록의 총 전투시간과 스킬 시전 횟수를 입력하면 CPM을 계산합니다.</p></div>
@@ -154,7 +157,7 @@
         </div>
 
         <!-- 오레하 계산기 -->
-        <div id="tool-view-oreha" class="hidden glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-orange-400 max-w-5xl mx-auto">
+        <div id="tool-view-oreha" class="hidden glass-panel p-4 md:p-6 shadow-sm border-t-4 border-t-orange-400 mx-auto">
             <div class="mb-6 text-center"><h2 class="text-lg md:text-xl font-bold text-slate-800 mb-1 flex items-center justify-center gap-2"><span class="text-orange-500">🔄</span> 어비도스 융화석 최적화 계산기</h2><p class="text-xs text-slate-500">보유하신 재료를 입력하면 가장 효율적인 교환 비율을 찾아 최대 제작 횟수를 안내합니다.</p></div>
             <div class="grid lg:grid-cols-12 gap-5">
                 <div class="lg:col-span-5 space-y-4">
@@ -195,12 +198,17 @@
       window.partyData = data.partyData || [];
       window.cpmData = data.cpmData || { inputs: {}, records: [] };
       window.oState = data.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
+      window.appState = data.appState || { title: '💻 로스트아크 클라우드 대시보드' };
     } else {
       window.charactersData = [];
       window.partyData = [];
       window.cpmData = { inputs: {}, records: [] };
       window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
+      window.appState = { title: '💻 로스트아크 클라우드 대시보드' };
     }
+
+    const titleEl = document.getElementById('display-app-title');
+    if(titleEl && window.appState.title) titleEl.innerText = window.appState.title;
 
     const indicator = document.getElementById('cloud-indicator');
     const status = document.getElementById('cloud-status');
@@ -221,7 +229,8 @@
       charactersData: window.charactersData || [],
       partyData: window.partyData || [],
       cpmData: window.cpmData || { inputs: {}, records: [] },
-      oState: window.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} }
+      oState: window.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} },
+      appState: window.appState || { title: '💻 로스트아크 클라우드 대시보드' }
     });
   };
 </script>
@@ -231,6 +240,7 @@
     window.cpmData = { inputs: { recordName: '', skillName: '', min: '', sec: '', casts: '', target: '', scarecrow: '', exclude: '0' }, records: [] };
     window.partyData = [];
     window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
+    window.appState = { title: '💻 로스트아크 클라우드 대시보드' };
     
     window.lastWeeklyResetId = null;
     window.hasCheckedWeeklyReset = false;
@@ -292,11 +302,23 @@
         return 'text-slate-700 bg-slate-100 border-slate-300';
     }
 
+    // 💡 [타이틀 변경 기능]
+    window.editAppTitle = function() {
+        const currentTitle = window.appState ? window.appState.title : '💻 로스트아크 클라우드 대시보드';
+        const newTitle = prompt("메인 화면의 타이틀을 입력해주세요:", currentTitle);
+        if (newTitle !== null && newTitle.trim() !== '') {
+            window.appState.title = newTitle.trim();
+            document.getElementById('display-app-title').innerText = newTitle.trim();
+            if(typeof window.saveToCloud === 'function') window.saveToCloud();
+            showToast('타이틀이 변경되었습니다.');
+        }
+    };
+
     window.showToast = function(message, type = 'success') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
         const bgColor = type === 'success' ? 'bg-green-600' : (type === 'warning' ? 'bg-orange-500' : 'bg-blue-600');
-        toast.className = 'toast-enter flex items-center text-white px-4 py-3 rounded-lg shadow-xl backdrop-blur text-sm font-bold ' + bgColor;
+        toast.className = 'toast-enter flex items-center text-white px-4 py-3 rounded-lg shadow-xl backdrop-blur text-[13px] font-bold ' + bgColor;
         toast.innerHTML = message;
         container.appendChild(toast);
         setTimeout(() => { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => toast.remove(), 500); }, 3000);
@@ -341,15 +363,15 @@
             if(typeof window.saveToCloud === 'function') window.saveToCloud();
             
             btnElement.innerHTML = '<span>🔄</span> 주간 숙제 전체 초기화';
-            btnElement.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
+            btnElement.className = "text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
             showToast('주간 숙제가 수동으로 완전 초기화되었습니다.');
         } else {
             btnElement.innerHTML = '<span>⚠️</span> 정말 초기화할까요?';
-            btnElement.className = "text-xs bg-red-600 text-white px-3 py-1.5 rounded border border-red-700 transition shadow-sm font-bold flex items-center gap-1";
+            btnElement.className = "text-[11px] bg-red-600 text-white px-3 py-1.5 rounded border border-red-700 transition shadow-sm font-bold flex items-center gap-1";
             setTimeout(() => {
                 if (btnElement && btnElement.innerText.includes("정말 초기화")) {
                     btnElement.innerHTML = '<span>🔄</span> 주간 숙제 전체 초기화';
-                    btnElement.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
+                    btnElement.className = "text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
                 }
             }, 3000);
         }
@@ -389,11 +411,11 @@
         const desc = document.getElementById('dashboard-desc');
         if(window.dashboardMode === 'party') {
             btn.innerHTML = '<span>👤</span> 개인 숙제 보기';
-            btn.className = "text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
+            btn.className = "text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded border border-slate-300 transition shadow-sm font-bold flex items-center gap-1";
             desc.innerHTML = "원하는 던전 열 아래의 <b>+ 파티 추가</b>를 눌러 파티를 짜보세요.";
         } else {
             btn.innerHTML = '<span>📊</span> 파티 짜기 보드';
-            btn.className = "text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded border border-blue-200 transition shadow-sm font-bold flex items-center gap-1";
+            btn.className = "text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded border border-blue-200 transition shadow-sm font-bold flex items-center gap-1";
             desc.innerHTML = "버튼화된 던전 뱃지를 클릭하면 체크(취소선) 처리됩니다.";
         }
         renderDashboard();
@@ -425,7 +447,7 @@
     }
 
     function renderPersonalDashboard(container) {
-        container.className = "grid grid-cols-1 lg:grid-cols-2 gap-4";
+        container.className = "grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-7xl mx-auto";
         const groupedByPlayer = window.charactersData.reduce((acc, char) => {
             if (!acc[char.player]) acc[char.player] = [];
             acc[char.player].push(char);
@@ -535,7 +557,7 @@
 
                 html += '<div class="rounded-lg p-2 md:p-2.5 border flex flex-col sm:flex-row sm:items-center justify-between transition gap-1.5 shadow-sm ' + cardClass + '">';
                 html += '<div class="flex items-center gap-1.5 whitespace-nowrap min-w-max">';
-                html += '<span class="font-bold text-sm text-slate-800">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-xs">✨</span>' : '') + char.name + '</span>';
+                html += '<span class="font-bold text-[13px] text-slate-800">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-xs">✨</span>' : '') + char.name + '</span>';
                 html += '<span class="text-[11px] md:text-xs text-slate-500 font-medium">Lv.' + char.level + '</span></div>';
                 html += contentsHtml + '</div>';
             });
@@ -545,21 +567,22 @@
     }
 
     function renderPartyDashboard(container) {
-        container.className = "flex flex-col gap-4 h-full";
+        container.className = "flex flex-col gap-3 h-full";
         
-        let filterHtml = '<div class="glass-panel p-3 flex flex-wrap gap-2 items-center shadow-sm bg-white mb-2">';
-        filterHtml += '<span class="text-xs font-bold text-slate-500 mr-1">🔍 보드 필터:</span>';
+        let filterHtml = '<div class="glass-panel p-2.5 flex flex-wrap gap-2 items-center shadow-sm bg-white mb-1">';
+        filterHtml += '<span class="text-[11px] font-bold text-slate-500 mr-1">🔍 보드 필터:</span>';
         
         partyDungeonCategories.forEach(cat => {
             const isActive = window.partyBoardFilters.has(cat.id);
             const btnClass = isActive ? 'bg-slate-600 text-white border-transparent' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-100';
-            filterHtml += '<button onclick="togglePartyBoardFilter(\'' + cat.id + '\')" class="px-3 py-1 rounded-full text-xs font-bold border transition ' + btnClass + '">' + cat.name + '</button>';
+            filterHtml += '<button onclick="togglePartyBoardFilter(\'' + cat.id + '\')" class="px-3 py-1 rounded-full text-[11px] font-bold border transition ' + btnClass + '">' + cat.name + '</button>';
         });
         filterHtml += '</div>';
         
-        let mainContent = '<div class="flex flex-col lg:flex-row gap-4 overflow-hidden h-full">';
+        let mainContent = '<div class="flex flex-col lg:flex-row gap-3 lg:gap-4 overflow-hidden h-full">';
 
-        let rosterHtml = '<div class="lg:w-48 shrink-0 flex flex-col"><div class="glass-panel p-3 sticky top-4 max-h-[85vh] overflow-y-auto">';
+        // 좌측 명단 패널
+        let rosterHtml = '<div class="lg:w-48 shrink-0 flex flex-col"><div class="glass-panel p-2.5 lg:p-3 sticky top-4 max-h-[85vh] overflow-y-auto">';
         rosterHtml += '<h3 class="text-[11px] font-bold text-slate-500 mb-2 border-b border-slate-200 pb-2 text-center">👥 명단 (드래그)</h3>';
         rosterHtml += '<div id="roster-container" class="space-y-3">';
         
@@ -572,14 +595,14 @@
         for (let player in grouped) {
             grouped[player].sort((a, b) => b.level - a.level);
             const pColor = getPlayerColor(player);
-            rosterHtml += '<div class="mb-3"><div class="text-[10px] font-black ' + pColor.text + ' mb-1 px-1 bg-slate-50 rounded text-center border border-slate-100 py-0.5">' + player + '</div><div class="flex flex-col gap-1">';
+            rosterHtml += '<div class="mb-2.5"><div class="text-[10px] font-black ' + pColor.text + ' mb-1 px-1 bg-slate-50 rounded text-center border border-slate-100 py-0.5">' + player + '</div><div class="flex flex-col gap-1">';
             
             grouped[player].forEach(char => {
                 const isSupp = supporters.includes(char.name);
                 const borderClass = isSupp ? 'supporter-glow border-slate-200' : 'bg-white border-slate-200';
                 
                 const isAllCleared = char.contents && char.contents.length > 0 && char.contents.every(content => window.isCharClearedDungeon(char, content));
-                const opacityClass = isAllCleared ? 'opacity-40 grayscale line-through' : '';
+                const opacityClass = isAllCleared ? 'opacity-40 grayscale bg-slate-50' : '';
                 const textStyle = isAllCleared ? 'line-through text-slate-400' : 'text-slate-700';
 
                 rosterHtml += '<div draggable="true" ondragstart="dragStart(event, \'' + char.dbId + '\')" class="flex justify-between items-center p-1.5 rounded border shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition ' + borderClass + ' ' + opacityClass + '">';
@@ -590,12 +613,13 @@
         }
         rosterHtml += '</div></div></div>';
 
-        let boardHtml = '<div class="flex-grow flex gap-4 overflow-x-auto pb-4 items-start">';
+        // 💡 [16:9 와이드 최적화] 던전 보드 리스트 간격 및 너비 축소
+        let boardHtml = '<div class="flex-grow flex gap-2.5 xl:gap-3 overflow-x-auto pb-4 items-start">';
         
         partyDungeonCategories.filter(cat => window.partyBoardFilters.has(cat.id)).forEach(cat => {
-            boardHtml += '<div class="w-[280px] shrink-0 flex flex-col gap-3">';
-            boardHtml += '<div class="bg-slate-200/60 py-2 text-center font-black text-slate-700 rounded-lg shadow-sm border border-slate-200">' + cat.name + '</div>';
-            boardHtml += '<div class="flex flex-col gap-3 min-h-[50px]">';
+            boardHtml += '<div class="w-[210px] xl:w-[230px] shrink-0 flex flex-col gap-2.5">';
+            boardHtml += '<div class="bg-slate-200/60 py-2 text-center font-black text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm">' + cat.name + '</div>';
+            boardHtml += '<div class="flex flex-col gap-2.5 min-h-[50px]">';
             
             const catParties = window.partyData.filter(p => p.cat === cat.id);
             catParties.forEach(pData => {
@@ -603,14 +627,13 @@
                 const completedCls = pData.isCleared ? 'party-completed' : '';
                 const checkedAttr = pData.isCleared ? 'checked' : '';
                 
-                boardHtml += '<div class="glass-panel p-3 transition-all relative group ' + completedCls + '">';
+                boardHtml += '<div class="glass-panel p-2 xl:p-2.5 transition-all relative group ' + completedCls + '">';
                 
-                // 💡 [버튼 상시 노출 및 위치 변경]
-                boardHtml += '<div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2"><div class="flex items-center gap-1.5">';
+                boardHtml += '<div class="flex justify-between items-start mb-2.5 border-b border-slate-100 pb-2"><div class="flex items-center gap-1.5">';
                 boardHtml += '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded ' + diffInfo.color + '">' + pData.diff + '</span></div>';
-                boardHtml += '<div class="flex items-center gap-2"><span class="text-[10px] text-slate-400 font-bold">Lv.' + pData.level + '</span>';
+                boardHtml += '<div class="flex items-center gap-1.5"><span class="text-[10px] text-slate-400 font-bold">Lv.' + pData.level + '</span>';
                 boardHtml += '<label class="flex items-center cursor-pointer"><input type="checkbox" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" ' + checkedAttr + ' onchange="togglePartyCleared(\'' + pData.id + '\')"></label>';
-                boardHtml += '<div class="flex items-center gap-1 ml-1 pl-2 border-l border-slate-200">';
+                boardHtml += '<div class="flex items-center gap-1 ml-0.5 pl-1.5 border-l border-slate-200">';
                 boardHtml += '<button onclick="clearPartySlots(\'' + pData.id + '\')" class="text-blue-500 bg-blue-50 hover:bg-blue-100 p-1 rounded transition text-xs shadow-sm" title="파티 비우기">🔄</button>';
                 boardHtml += '<button onclick="deleteParty(\'' + pData.id + '\')" class="text-red-500 bg-red-50 hover:bg-red-100 p-1 rounded transition text-xs shadow-sm" title="파티 삭제">❌</button>';
                 boardHtml += '</div></div></div>';
@@ -628,14 +651,18 @@
                         const pColor = getPlayerColor(char.player);
                         const isSupp = supporters.includes(char.name);
                         
-                        boardHtml += '<div class="flex items-center justify-between p-2 rounded border ' + pColor.border + ' ' + pColor.bg + ' shadow-sm"><div class="flex items-center gap-1.5">';
-                        boardHtml += '<span class="text-[10px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1.5 py-0.5 rounded">' + char.player + '</span>';
-                        boardHtml += '<span class="text-xs font-black text-slate-800 tracking-wide">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : '') + char.name + '</span></div>';
-                        boardHtml += '<div class="flex items-center gap-1"><span class="text-[9px] text-slate-400">' + char.level + '</span>';
-                        boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-400 hover:text-red-500 font-bold transition px-1 text-[10px]">✕</button></div></div>';
+                        // 💡 [스왑 드래그 앤 드롭 지원] 슬롯 캐릭터에 dragStartFromSlot 추가
+                        boardHtml += '<div draggable="true" ondragstart="dragStartFromSlot(event, \'' + char.dbId + '\', \'' + pData.id + '\', ' + i + ')" ';
+                        boardHtml += 'ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, \'' + pData.id + '\', ' + i + ')" ';
+                        boardHtml += 'class="flex items-center justify-between p-1.5 rounded border ' + pColor.border + ' ' + pColor.bg + ' shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition">';
+                        boardHtml += '<div class="flex items-center gap-1.5 truncate">';
+                        boardHtml += '<span class="text-[9px] font-bold ' + pColor.label + ' ' + pColor.text + ' px-1.5 py-0.5 rounded leading-none flex-shrink-0">' + char.player + '</span>';
+                        boardHtml += '<span class="text-[12px] font-black text-slate-800 tracking-wide truncate">' + (isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : '') + char.name + '</span></div>';
+                        boardHtml += '<div class="flex items-center gap-1 flex-shrink-0"><span class="text-[9px] text-slate-400 font-medium">' + char.level + '</span>';
+                        boardHtml += '<button onclick="removeCharacterFromSlot(event, \'' + pData.id + '\', ' + i + ')" class="text-slate-400 hover:text-red-500 font-bold transition px-1 text-[10px] cursor-pointer">✕</button></div></div>';
                     } else {
                         if (slotCharId) pData.slots[i] = "";
-                        boardHtml += '<div class="slot-droppable rounded p-2 text-center text-[10px] font-bold text-slate-400 cursor-pointer hover:bg-slate-50 transition flex items-center justify-center gap-1" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, \'' + pData.id + '\', ' + i + ')" onclick="openDropdown(event, \'' + pData.id + '\', ' + i + ')"><span>+</span> 빈자리</div>';
+                        boardHtml += '<div class="slot-droppable rounded p-1.5 text-center text-[10px] font-bold text-slate-400 cursor-pointer hover:bg-slate-50 transition flex items-center justify-center gap-1 h-[34px]" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, \'' + pData.id + '\', ' + i + ')" onclick="openDropdown(event, \'' + pData.id + '\', ' + i + ')"><span>+</span> 빈자리</div>';
                     }
                 }
                 boardHtml += '</div></div>';
@@ -647,8 +674,8 @@
             });
             
             boardHtml += '</div>';
-            boardHtml += '<div class="group relative w-full mt-1"><button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition">+ 파티 추가</button>';
-            boardHtml += '<div class="hidden group-hover:flex absolute bottom-full left-0 w-full pb-1 z-20"><div class="bg-white border border-slate-200 shadow-xl rounded-lg p-2 gap-1.5 flex-wrap justify-center flex w-full">';
+            boardHtml += '<div class="group relative w-full mt-0.5"><button class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold hover:bg-slate-100 hover:border-slate-400 transition">+ 파티 추가</button>';
+            boardHtml += '<div class="hidden group-hover:flex absolute bottom-full left-0 w-full pb-1 z-20"><div class="bg-white border border-slate-200 shadow-xl rounded-lg p-1.5 gap-1 flex-wrap justify-center flex w-full">';
             boardHtml += diffButtons;
             boardHtml += '</div></div></div></div>';
         });
@@ -697,10 +724,17 @@
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
+    // 💡 [드래그 앤 드롭 스왑 로직 추가]
     window.dragStart = function(e, charId) { 
         e.dataTransfer.effectAllowed = 'copyMove'; 
-        e.dataTransfer.setData('text/plain', charId); 
+        e.dataTransfer.setData('text/plain', JSON.stringify({ charId: charId })); 
         closeDropdown(); 
+    };
+
+    window.dragStartFromSlot = function(e, charId, partyId, slotIndex) {
+        e.dataTransfer.effectAllowed = 'copyMove';
+        e.dataTransfer.setData('text/plain', JSON.stringify({ charId: charId, sourcePartyId: partyId, sourceSlotIndex: slotIndex }));
+        closeDropdown();
     };
     
     window.allowDrop = function(e) { 
@@ -716,51 +750,91 @@
         e.preventDefault(); 
         e.currentTarget.classList.remove('drag-over');
         
-        let charId = e.dataTransfer.getData('text/plain');
-        if (!charId) charId = e.dataTransfer.getData('Text'); 
+        let dataStr = e.dataTransfer.getData('text/plain');
+        if (!dataStr) dataStr = e.dataTransfer.getData('Text'); 
         
-        if (charId) {
-            assignCharacterToSlot(charId, partyId, slotIndex);
+        if (dataStr) {
+            try {
+                let data = JSON.parse(dataStr);
+                if (data.charId) {
+                    assignCharacterToSlot(data.charId, partyId, slotIndex, data.sourcePartyId, data.sourceSlotIndex);
+                }
+            } catch(err) {
+                assignCharacterToSlot(dataStr, partyId, slotIndex); // Fallback
+            }
         } else {
             showToast('데이터를 가져오지 못했습니다. 클릭하여 드롭다운으로 추가해 보세요.', 'warning');
         }
     };
 
-    window.assignCharacterToSlot = function(charId, partyId, slotIndex) {
+    // 💡 [배정, 스왑, 유효성 검사 종합 로직]
+    window.assignCharacterToSlot = function(charId, targetPartyId, targetSlotIndex, sourcePartyId, sourceSlotIndex) {
         const char = window.charactersData.find(c => c.dbId === charId);
-        const party = window.partyData.find(p => p.id === partyId);
-        if (!char || !party) return;
-        if (char.level < party.level) { showToast('입장 레벨이 부족합니다. (' + char.level + ' / ' + party.level + ')', 'warning'); return; }
+        const targetParty = window.partyData.find(p => p.id === targetPartyId);
+        if (!char || !targetParty) return;
 
-        if (!party.slots) party.slots = ["", "", "", ""];
-        
-        if (party.slots.includes(charId) && party.slots.indexOf(charId) !== slotIndex) {
-            // 같은 파티 내에서의 슬롯 이동은 패스
-        } else {
-            // 💡 [유효성 검사 1] 동일한 플레이어의 다른 캐릭터가 이 파티에 있는지 확인
-            const isPlayerAlreadyInParty = party.slots.some(sId => {
-                if(!sId || sId === charId) return false;
-                const c = window.charactersData.find(x => x.dbId === sId);
-                return c && c.player === char.player;
-            });
+        if (char.level < targetParty.level) { showToast(`입장 레벨이 부족합니다. (${char.level}/${targetParty.level})`, 'warning'); return; }
+
+        if (!targetParty.slots) targetParty.slots = ["", "", "", ""];
+        const targetSlotCharId = targetParty.slots[targetSlotIndex];
+
+        if (charId === targetSlotCharId) return; // 제자리 드롭은 무시
+
+        // 1. 타겟 파티 유효성 검사
+        const isPlayerAlreadyInParty = targetParty.slots.some((sId, idx) => {
+            if(!sId || idx === targetSlotIndex) return false; // 덮어씌워질 자리는 제외
+            if(sourcePartyId === targetPartyId && idx === sourceSlotIndex) return false; // 내 원래 자리는 어차피 빠질 거니 제외
             
-            if (isPlayerAlreadyInParty) {
-                showToast(`한 파티에 동일한 플레이어(${char.player})가 2명 들어갈 수 없습니다.`, 'warning');
-                return;
-            }
+            const c = window.charactersData.find(x => x.dbId === sId);
+            return c && c.player === char.player;
+        });
+        
+        if (isPlayerAlreadyInParty) {
+            showToast(`한 파티에 동일한 플레이어(${char.player})가 2명 들어갈 수 없습니다.`, 'warning');
+            return;
+        }
 
-            // [유효성 검사 2] 이 캐릭터가 동일한 던전 라인(cat)의 다른 파티에 있는지 확인
-            const existingParty = window.partyData.find(p => p.cat === party.cat && p.id !== party.id && p.slots && p.slots.includes(charId));
-            if (existingParty) {
-                showToast(`해당 캐릭터(${char.name})는 이미 다른 ${party.cat} 파티에 참여 중입니다.`, 'warning');
-                return;
+        const existingParty = window.partyData.find(p => p.cat === targetParty.cat && p.id !== targetParty.id && p.slots && p.slots.includes(charId));
+        if (existingParty && existingParty.id !== sourcePartyId) {
+            showToast(`해당 캐릭터(${char.name})는 이미 다른 ${targetParty.cat} 파티에 참여 중입니다.`, 'warning');
+            return;
+        }
+
+        // 2. 타겟 슬롯에 캐릭터가 있을 경우 스왑 처리
+        let sourceParty = null;
+        if (sourcePartyId !== undefined && sourcePartyId !== null) {
+            sourceParty = window.partyData.find(p => p.id === sourcePartyId);
+        } else {
+            const existingIndex = targetParty.slots.indexOf(charId);
+            if (existingIndex > -1) targetParty.slots[existingIndex] = "";
+        }
+
+        if (sourceParty && sourceSlotIndex !== undefined) {
+            if (targetSlotCharId) {
+                const targetChar = window.charactersData.find(c => c.dbId === targetSlotCharId);
+                let canSwap = false;
+                if (targetChar && targetChar.level >= sourceParty.level) {
+                    const isTargetPlayerInSource = sourceParty.slots.some((sId, idx) => {
+                        if(!sId || idx === sourceSlotIndex) return false;
+                        if(sourcePartyId === targetPartyId && idx === targetSlotIndex) return false;
+                        const c = window.charactersData.find(x => x.dbId === sId);
+                        return c && c.player === targetChar.player;
+                    });
+                    if (!isTargetPlayerInSource) canSwap = true;
+                }
+                
+                if (canSwap) {
+                    sourceParty.slots[sourceSlotIndex] = targetSlotCharId; // 아름다운 스왑 성공
+                } else {
+                    sourceParty.slots[sourceSlotIndex] = ""; // 스왑 불가면 방 빼고 로스터로 쫓겨남
+                }
+            } else {
+                sourceParty.slots[sourceSlotIndex] = "";
             }
         }
 
-        const existingIndex = party.slots.indexOf(charId);
-        if (existingIndex > -1) party.slots[existingIndex] = "";
-
-        party.slots[slotIndex] = charId;
+        // 3. 내 캐릭터 안착
+        targetParty.slots[targetSlotIndex] = charId;
         if(typeof window.saveToCloud === 'function') window.saveToCloud();
     };
 
@@ -790,16 +864,13 @@
         list.innerHTML = '';
         currentDropdownTarget = { partyId, slotIndex };
 
-        // 💡 [드롭다운 필터 강화] 레벨 부족, 이미 배정된 캐릭터, 중복 플레이어 숨김
         let availableChars = window.charactersData.filter(char => {
             if (char.level < party.level) return false;
             if (party.slots && party.slots.includes(char.dbId)) return false;
             
-            // 동일 캐릭터가 다른 파티(동일 던전)에 있는지 체크
             const inOtherParty = window.partyData.some(p => p.cat === party.cat && p.id !== party.id && p.slots && p.slots.includes(char.dbId));
             if (inOtherParty) return false;
             
-            // 동일 플레이어의 다른 캐릭터가 이 파티에 이미 있는지 체크
             const playerInThisParty = party.slots.some(sId => {
                 if (!sId) return false;
                 const c = window.charactersData.find(x => x.dbId === sId);
