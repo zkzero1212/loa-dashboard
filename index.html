@@ -21,10 +21,13 @@
         .slot-droppable.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
         .party-completed { opacity: 0.25; filter: grayscale(100%) brightness(0.9); transition: all 0.3s; }
         
-        /* 로스터 하이라이트 기능 시각 효과 */
+        /* 하이라이트 & 추적 시각 효과 */
         .roster-dimmed { opacity: 0.2 !important; filter: grayscale(100%) !important; transition: all 0.3s; pointer-events: none; }
         .roster-highlight { outline: 2px solid #3b82f6; outline-offset: 1px; transform: scale(1.03); z-index: 10; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.2s; }
         .party-box-highlight { outline: 2px solid #3b82f6; outline-offset: 1px; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.15); }
+        
+        .char-track-party { outline: 2px dashed #a855f7; outline-offset: 1px; background: rgba(250, 245, 255, 0.98) !important; transition: all 0.3s; }
+        .char-track-slot { outline: 2px solid #a855f7 !important; outline-offset: 1px; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(168, 85, 247, 0.3) !important; z-index: 10; position: relative; }
         
         ::-webkit-scrollbar { width: 8px; height: 10px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
@@ -200,6 +203,7 @@
   window.appState = { title: '💻 로스트아크 클라우드 대시보드' };
   
   window.activeHighlightPartyId = null;
+  window.activeHighlightCharId = null; // ★ 캐릭터 개별 하이라이트(추적) 변수 추가
   window.lastWeeklyResetId = null;
   window.hasCheckedWeeklyReset = false;
   window.configSelectedPlayers = new Set();
@@ -269,7 +273,6 @@
       return 'text-slate-700 bg-slate-100 border-slate-300';
   }
 
-  // ★ 변경된 핵심 완료 판정 함수 (특정 난이도가 아닌 '카테고리' 단위로 클리어 여부 확인)
   window.isCharClearedDungeon = function(char, fullDiffStr) {
       let catId = fullDiffStr;
       for (const cat of dungeonCategories) {
@@ -340,26 +343,61 @@
           if (e.target.closest('button') || e.target.closest('input')) return;
       }
 
+      window.activeHighlightCharId = null; // 파티 클릭 시 캐릭터 추적 초기화
       if (window.activeHighlightPartyId === partyId) { window.activeHighlightPartyId = null; } 
       else { window.activeHighlightPartyId = partyId; }
       window.updateHighlightDOM();
   };
 
+  // ★ 하이라이트 & 위치 추적 기능 종합 제어
   window.updateHighlightDOM = function() {
       const partyId = window.activeHighlightPartyId;
+      const trackCharId = window.activeHighlightCharId;
+
+      // 1. 파티 박스 효과
       document.querySelectorAll('.party-box-element').forEach(el => {
-          if (partyId && el.id === 'party-box-' + partyId) el.classList.add('party-box-highlight');
-          else el.classList.remove('party-box-highlight');
+          el.classList.remove('party-box-highlight', 'char-track-party');
+          if (partyId && el.id === 'party-box-' + partyId) {
+              el.classList.add('party-box-highlight');
+          } else if (trackCharId) {
+              const pId = el.id.replace('party-box-', '');
+              const party = window.partyData.find(p => p.id === pId);
+              if (party && party.slots && party.slots.includes(trackCharId)) {
+                  el.classList.add('char-track-party');
+              }
+          }
       });
 
+      // 2. 명단(로스터) 캐릭터 효과
       document.querySelectorAll('.roster-char-element').forEach(el => {
-          el.classList.remove('roster-dimmed', 'roster-highlight');
+          el.classList.remove('roster-dimmed', 'roster-highlight', 'char-track-slot');
+          const charId = el.getAttribute('data-char-id');
+
           if (partyId) {
-              const charId = el.getAttribute('data-char-id');
               const char = window.charactersData.find(c => c.dbId === charId);
               const party = window.partyData.find(p => p.id === partyId);
-              if (char && party && window.isCharEligibleForParty(char, party)) { el.classList.add('roster-highlight'); } 
-              else { el.classList.add('roster-dimmed'); }
+              if (char && party && window.isCharEligibleForParty(char, party)) { 
+                  el.classList.add('roster-highlight'); 
+              } else { 
+                  el.classList.add('roster-dimmed'); 
+              }
+          } else if (trackCharId) {
+              if (charId === trackCharId) {
+                  el.classList.add('char-track-slot');
+              } else {
+                  el.classList.add('roster-dimmed');
+              }
+          }
+      });
+
+      // 3. 파티 내부의 슬롯 효과
+      document.querySelectorAll('.party-slot-element').forEach(el => {
+          el.classList.remove('char-track-slot');
+          if (trackCharId) {
+              const slotCharId = el.getAttribute('data-char-id');
+              if (slotCharId === trackCharId) {
+                  el.classList.add('char-track-slot');
+              }
           }
       });
   };
@@ -721,14 +759,16 @@
                       const pColor = getPlayerColor(char.player);
                       const isSupp = supporters.includes(char.name);
                       
-                      boardHtml += `<div onclick="openDropdown(event, '${pData.id}', ${i})" `;
+                      // ★ 슬롯 요소에 data-char-id 와 party-slot-element 추가
+                      boardHtml += `<div class="party-slot-element flex items-center justify-between p-1.5 rounded border ${pColor.border} ${pColor.bg} shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 hover:shadow-md transition" `;
+                      boardHtml += `data-char-id="${char.dbId}" `;
+                      boardHtml += `onclick="openDropdown(event, '${pData.id}', ${i})" `;
                       boardHtml += `draggable="true" ondragstart="dragStartFromSlot(event, '${char.dbId}', '${pData.id}', ${i})" `;
-                      boardHtml += `ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${pData.id}', ${i})" `;
-                      boardHtml += `class="flex items-center justify-between p-1.5 rounded border ${pColor.border} ${pColor.bg} shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 hover:shadow-md transition">`;
-                      boardHtml += '<div class="flex items-center gap-1.5 truncate">';
+                      boardHtml += `ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${pData.id}', ${i})">`;
+                      boardHtml += '<div class="flex items-center gap-1.5 truncate pointer-events-none">';
                       boardHtml += `<span class="text-[9px] font-bold ${pColor.label} ${pColor.text} px-1.5 py-0.5 rounded leading-none flex-shrink-0">${char.player}</span>`;
                       boardHtml += `<span class="text-[12px] font-black text-slate-800 tracking-wide truncate">${(isSupp ? '<span class="text-yellow-500 mr-0.5 text-[10px]">✨</span>' : '')}${char.name}</span></div>`;
-                      boardHtml += `<div class="flex items-center gap-1 flex-shrink-0"><span class="text-[9px] text-slate-400 font-medium">${char.level}</span>`;
+                      boardHtml += `<div class="flex items-center gap-1 flex-shrink-0"><span class="text-[9px] text-slate-400 font-medium pointer-events-none">${char.level}</span>`;
                       boardHtml += `<button onclick="removeCharacterFromSlot(event, '${pData.id}', ${i})" class="text-slate-400 hover:text-red-500 font-bold transition px-1 text-[10px] cursor-pointer">✕</button></div></div>`;
                   } else {
                       if (slotCharId) pData.slots[i] = "";
@@ -758,25 +798,36 @@
       setTimeout(() => { if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM(); }, 0);
   };
 
+  // ★ 명단 클릭 시 배정 또는 추적 토글
   window.handleRosterClick = function(charId) {
-      if (!window.activeHighlightPartyId) return;
-      const party = window.partyData.find(p => p.id === window.activeHighlightPartyId);
-      const char = window.charactersData.find(c => c.dbId === charId);
-      if (!party || !char) return;
+      if (window.activeHighlightPartyId) {
+          // 선택된 파티가 있을 때는 배정 로직 실행
+          const party = window.partyData.find(p => p.id === window.activeHighlightPartyId);
+          const char = window.charactersData.find(c => c.dbId === charId);
+          if (!party || !char) return;
 
-      if (!window.isCharEligibleForParty(char, party)) {
-          window.showToast('배정 조건을 만족하지 않습니다. (레벨 부족 또는 플레이어 중복)', 'warning');
-          return;
+          if (!window.isCharEligibleForParty(char, party)) {
+              window.showToast('배정 조건을 만족하지 않습니다. (레벨 부족 또는 플레이어 중복)', 'warning');
+              return;
+          }
+
+          if (!party.slots) party.slots = ["", "", "", ""];
+          const emptyIdx = party.slots.findIndex(s => s === "" || s === null);
+          if (emptyIdx === -1) {
+              window.showToast('파티에 빈자리가 없습니다.', 'warning');
+              return;
+          }
+
+          window.assignCharacterToSlot(charId, party.id, emptyIdx);
+      } else {
+          // 선택된 파티가 없을 때는 캐릭터 추적(하이라이트) 로직 실행
+          if (window.activeHighlightCharId === charId) {
+              window.activeHighlightCharId = null; // 이미 켜져있으면 끄기
+          } else {
+              window.activeHighlightCharId = charId; // 켜기
+          }
+          if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
       }
-
-      if (!party.slots) party.slots = ["", "", "", ""];
-      const emptyIdx = party.slots.findIndex(s => s === "" || s === null);
-      if (emptyIdx === -1) {
-          window.showToast('파티에 빈자리가 없습니다.', 'warning');
-          return;
-      }
-
-      window.assignCharacterToSlot(charId, party.id, emptyIdx);
   };
 
   window.addParty = function(catId, diffName, diffLevel) {
@@ -800,7 +851,6 @@
       }
   };
 
-  // ★ 변경된 뱃지 클릭(완료 토글) 함수 로직
   window.toggleCompletion = function(dbId, content) {
       const char = window.charactersData.find(c => c.dbId === dbId);
       if (!char) return;
@@ -938,7 +988,31 @@
       const party = window.partyData.find(p => p.id === partyId);
       if(!party) return;
       
-      // ✅ 드롭박스 클릭 시 파티 하이라이트 켜기
+      // ★ [추가된 로직] 양방향 원클릭 배정: 캐릭터(명단)가 선택된 상태에서 파티 슬롯을 클릭한 경우
+      if (window.activeHighlightCharId) {
+          const char = window.charactersData.find(c => c.dbId === window.activeHighlightCharId);
+          if (char) {
+              // 자신이 이미 들어있는 슬롯을 눌렀을 때는 선택(하이라이트)을 해제하도록 편의성 추가
+              if (party.slots && party.slots[slotIndex] === char.dbId) {
+                  window.activeHighlightCharId = null;
+                  if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
+                  return;
+              }
+
+              if (!window.isCharEligibleForParty(char, party)) {
+                  window.showToast('배정 조건을 만족하지 않습니다. (레벨 부족, 플레이어 중복 또는 이미 배정됨)', 'warning');
+                  return; 
+              }
+              
+              // 캐릭터 배정 실행
+              window.assignCharacterToSlot(char.dbId, partyId, slotIndex);
+              // 한 캐릭터를 여러 레이드(4막, 종막 등)에 연속으로 넣을 수 있게 하이라이트(activeHighlightCharId) 유지
+              return; // 드롭다운을 열지 않고 종료
+          }
+      }
+
+      // ✅ 캐릭터 선택 모드가 아닐 때: 기존처럼 드롭박스 클릭 시 파티 하이라이트 켜기
+      window.activeHighlightCharId = null; // 캐릭터 추적 모드는 끄기
       window.activeHighlightPartyId = partyId;
       if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
       
@@ -997,11 +1071,11 @@
       menu.style.left = leftPos + 'px';
   };
 
-  // 난이도 변경 드롭다운 함수 추가
   window.openDiffDropdown = function(e, partyId, catId) {
       e.stopPropagation();
       
       // ✅ 난이도 드롭박스 클릭 시에도 파티 하이라이트 켜기
+      window.activeHighlightCharId = null;
       window.activeHighlightPartyId = partyId;
       if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
       
@@ -1046,7 +1120,6 @@
       menu.style.left = leftPos + 'px';
   };
 
-  // 파티 난이도 변경 처리 함수
   window.changePartyDifficulty = function(partyId, newDiff, newLevel) {
       const party = window.partyData.find(p => p.id === partyId);
       if(party) {
@@ -1075,12 +1148,25 @@
 
   window.closeDropdown = function() { document.getElementById('dropdown-menu').style.display = 'none'; currentDropdownTarget = null; };
   
+  // ★ 빈 공간 클릭 시 모든 하이라이트/추적 초기화 처리
   document.addEventListener('click', (e) => { 
       if (!e.target.closest('#dropdown-menu')) window.closeDropdown(); 
-      if (window.activeHighlightPartyId && !e.target.closest('.party-box-element') && !e.target.closest('.roster-char-element')) {
+      
+      let needsUpdate = false;
+      
+      // 1. 파티 하이라이트 해제 (파티박스나 명단, 드롭다운이 아닌 곳 클릭 시)
+      if (window.activeHighlightPartyId && !e.target.closest('.party-box-element') && !e.target.closest('.roster-char-element') && !e.target.closest('#dropdown-menu')) {
           window.activeHighlightPartyId = null;
-          if(typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
+          needsUpdate = true;
       }
+      
+      // 2. 캐릭터 추적 해제 (명단이나 파티슬롯이 아닌 곳 클릭 시)
+      if (window.activeHighlightCharId && !e.target.closest('.roster-char-element') && !e.target.closest('.party-slot-element')) {
+          window.activeHighlightCharId = null;
+          needsUpdate = true;
+      }
+
+      if(needsUpdate && typeof window.updateHighlightDOM === 'function') window.updateHighlightDOM();
   });
 
   window.toggleFilter = function(categoryId) {
