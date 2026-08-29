@@ -303,6 +303,7 @@ window.renderAll = function() {
     window.renderConfigTable(); 
     window.renderCpmRecords(); 
     if(typeof window.renderOrehaUI === 'function') window.renderOrehaUI();
+    if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator(); // ★ 추가됨
 };
 
 window.switchTab = function(tabName) {
@@ -314,6 +315,37 @@ window.switchTab = function(tabName) {
     });
     if (tabName === 'config') { window.renderConfigFilters(); window.renderConfigTable(); } 
     else if (tabName !== 'tools') { window.renderAll(); }
+};
+
+window.switchToolTab = function(tabName) {
+    const tabCpm = document.getElementById('tool-tab-cpm'); 
+    const tabOreha = document.getElementById('tool-tab-oreha');
+    const tabGold = document.getElementById('tool-tab-gold');
+    
+    const viewCpm = document.getElementById('tool-view-cpm'); 
+    const viewOreha = document.getElementById('tool-view-oreha');
+    const viewGold = document.getElementById('tool-view-gold');
+    
+    if(tabCpm) tabCpm.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-blue-600 transition shrink-0";
+    if(tabOreha) tabOreha.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition shrink-0";
+    if(tabGold) tabGold.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-emerald-600 transition shrink-0";
+    
+    if(viewCpm) viewCpm.classList.add('hidden');
+    if(viewOreha) viewOreha.classList.add('hidden');
+    if(viewGold) viewGold.classList.add('hidden');
+
+    if (tabName === 'cpm') {
+        if(tabCpm) tabCpm.className = "text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition shrink-0";
+        if(viewCpm) viewCpm.classList.remove('hidden');
+    } else if (tabName === 'oreha') {
+        if(tabOreha) tabOreha.className = "text-orange-500 font-bold px-1 py-1 border-b-2 border-orange-500 text-sm transition shrink-0";
+        if(viewOreha) viewOreha.classList.remove('hidden'); 
+        if(typeof window.renderOrehaUI === 'function') window.renderOrehaUI(); 
+    } else if (tabName === 'gold') {
+        if(tabGold) tabGold.className = "text-emerald-600 font-bold px-1 py-1 border-b-2 border-emerald-500 text-sm transition shrink-0";
+        if(viewGold) viewGold.classList.remove('hidden');
+        if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator();
+    }
 };
 
 window.toggleDashboardMode = function() {
@@ -1143,18 +1175,6 @@ window.requestReset = function(btnElement) {
     }
 };
 
-window.switchToolTab = function(tabName) {
-    const tabCpm = document.getElementById('tool-tab-cpm'); const tabOreha = document.getElementById('tool-tab-oreha');
-    const viewCpm = document.getElementById('tool-view-cpm'); const viewOreha = document.getElementById('tool-view-oreha');
-    if (tabName === 'cpm') {
-        tabCpm.className = "text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition"; tabOreha.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition";
-        viewCpm.classList.remove('hidden'); viewOreha.classList.add('hidden');
-    } else if (tabName === 'oreha') {
-        tabCpm.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-blue-600 transition"; tabOreha.className = "text-orange-500 font-bold px-1 py-1 border-b-2 border-orange-500 text-sm transition";
-        viewCpm.classList.add('hidden'); viewOreha.classList.remove('hidden'); window.renderOrehaUI(); 
-    }
-};
-
 window.runCpmCalculation = function() {
     const min = parseInt(document.getElementById('cpm-min').value) || 0; const sec = parseInt(document.getElementById('cpm-sec').value) || 0; const casts = parseInt(document.getElementById('cpm-casts').value) || 0;
     const target = parseFloat(document.getElementById('cpm-target').value) || 0; const scarecrow = parseFloat(document.getElementById('cpm-scarecrow').value) || 0; const exclude = parseInt(document.getElementById('cpm-exclude').value) || 0;
@@ -1424,6 +1444,113 @@ window.renderOrehaResult = function() {
     html += `<table class="w-full text-left text-xs"><thead class="text-slate-500 border-b border-slate-200 font-bold"><tr><th class="pb-2">재료</th><th class="pb-2 text-right">소모/변환량</th><th class="pb-2 text-right">남는 수량</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
     
     resContainer.innerHTML = html;
+};
+
+// ==========================================
+// 레이드 골드 계산기 로직
+// ==========================================
+const raidGoldData = [
+    { id: '1710', title: 'Lv. 1710', trade: { trade: 45500, bound: 45500, total: 91000, dungeons: ['4막 노말', '세르카 노말', '종막 노말'] }, bound: { trade: 32000, bound: 62000, total: 94000, dungeons: ['세르카 노말', '종막 노말', '성당 1단'] }, total: { trade: 32000, bound: 62000, total: 94000, dungeons: ['세르카 노말', '종막 노말', '성당 1단'] }, prevId: null },
+    { id: '1720', title: 'Lv. 1720', trade: { trade: 70000, bound: 32000, total: 102000, dungeons: ['4막 하드', '세르카 노말', '종막 노말'] }, bound: { trade: 32000, bound: 72000, total: 104000, dungeons: ['세르카 노말', '종막 노말', '성당 2단'] }, total: { trade: 54000, bound: 56000, total: 110000, dungeons: ['4막 하드', '성당 2단', '세르카(또는 종막) 노말'] }, prevId: '1710' },
+    { id: '1730', title: 'Lv. 1730', trade: { trade: 130000, bound: 0, total: 130000, dungeons: ['종막 하드', '세르카 하드', '4막 하드'] }, bound: { trade: 32000, bound: 72000, total: 104000, dungeons: ['세르카 노말', '종막 노말', '성당 2단'] }, total: { trade: 92000, bound: 40000, total: 132000, dungeons: ['종막 하드', '세르카 하드', '성당 2단'] }, prevId: '1720' },
+    { id: '1750_hm', title: 'Lv. 1750', subtitle: '세르카 하드 (배럭 권장)', trade: { trade: 142000, bound: 0, total: 142000, dungeons: ['벨가르딘', '종막 하드', '세르카 하드'] }, bound: { trade: 32000, bound: 82000, total: 114000, dungeons: ['세르카 노말', '종막 노말', '성당 3단'] }, total: { trade: 98000, bound: 50000, total: 148000, dungeons: ['벨가르딘', '성당 3단', '종막 하드'] }, prevId: '1730' },
+    { id: '1750_nm', title: 'Lv. 1750', subtitle: '세르카 나이트메어', trade: { trade: 152000, bound: 0, total: 152000, dungeons: ['세르카 나메', '벨가르딘', '종막 하드'] }, bound: { trade: 32000, bound: 82000, total: 114000, dungeons: ['세르카 노말', '종막 노말', '성당 3단'] }, total: { trade: 104000, bound: 50000, total: 154000, dungeons: ['세르카 나메', '벨가르딘', '성당 3단'] }, prevId: '1730' }
+];
+
+window.renderGoldCalculator = function() {
+    const container = document.getElementById('tool-view-gold');
+    if (!container) return;
+    
+    const formatGold = (num) => new Intl.NumberFormat('ko-KR').format(num);
+    
+    const getDiffBadgeHtml = (current, prev) => {
+        if (prev === undefined || prev === null) return '<span class="text-slate-400 text-[11px] ml-1 font-mono">(-)</span>';
+        const diff = current - prev;
+        if (diff === 0) return '<span class="text-slate-400 text-[11px] ml-1 font-mono">(-)</span>';
+        const colorClass = diff > 0 ? 'text-emerald-600' : 'text-rose-500';
+        const sign = diff > 0 ? '+' : '';
+        return `<span class="${colorClass} text-[11px] ml-1 font-mono tracking-tighter">(${sign}${formatGold(diff)})</span>`;
+    };
+
+    const getStrategyCardHtml = (title, icon, colorClass, data, prevData) => {
+        const textColor = colorClass.replace('border-', 'text-');
+        let dungeonsHtml = data.dungeons.map(d => `<span class="bg-white border border-slate-200 text-slate-600 shadow-sm text-[10px] px-1.5 py-0.5 rounded">${d}</span>`).join('');
+        
+        return `
+            <div class="glass-panel rounded-lg border-t-4 p-3 flex flex-col h-full ${colorClass}">
+                <div class="flex items-center gap-2 border-b border-slate-100 pb-2 mb-2.5">
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center bg-slate-50 ${textColor}">
+                        <i class="fa-solid ${icon} text-[10px]"></i>
+                    </div>
+                    <h3 class="font-bold text-[13px] text-slate-800 tracking-tight">${title}</h3>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <div class="bg-slate-50 p-2 rounded flex flex-wrap items-center gap-1">
+                        <span class="text-[11px] font-semibold text-slate-500">총 획득 합계:</span>
+                        <div class="flex items-baseline">
+                            <span class="text-[13px] font-black text-emerald-600 tracking-tight ml-1">${formatGold(data.total)}</span>
+                            ${getDiffBadgeHtml(data.total, prevData?.total)}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs px-1 py-0.5">
+                        <div class="flex flex-col">
+                            <span class="text-slate-500 text-[10px] mb-0.5">유통 골드</span>
+                            <div class="flex items-baseline flex-wrap">
+                                <span class="font-bold text-amber-600 text-[12px]">${formatGold(data.trade)}</span>
+                                ${getDiffBadgeHtml(data.trade, prevData?.trade)}
+                            </div>
+                        </div>
+                        <div class="flex flex-col border-l border-slate-200 pl-2">
+                            <span class="text-slate-500 text-[10px] mb-0.5">귀속 골드</span>
+                            <div class="flex items-baseline flex-wrap">
+                                <span class="font-bold text-sky-600 text-[12px]">${formatGold(data.bound)}</span>
+                                ${getDiffBadgeHtml(data.bound, prevData?.bound)}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2.5 border-t border-slate-100 mt-auto">
+                        <div class="flex flex-wrap gap-1">${dungeonsHtml}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    let html = `
+        <div class="border-b border-slate-300 pb-3 mt-2 mb-6">
+            <h2 class="text-xl md:text-2xl font-black text-slate-900 mb-1 tracking-tight">
+                <i class="fa-brands fa-d-and-d mr-2 text-emerald-600"></i>로스트아크 골드 효율 계산기
+            </h2>
+            <p class="text-xs text-slate-500">1710 ~ 1750 레벨 구간별 최적 던전 조합 및 증감량</p>
+        </div>
+        <div class="space-y-10">
+    `;
+
+    raidGoldData.forEach(levelData => {
+        const prevData = levelData.prevId ? raidGoldData.find(d => d.id === levelData.prevId) : null;
+        let subtitleHtml = levelData.subtitle ? `<span class="text-[10px] bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-normal">${levelData.subtitle}</span>` : '';
+        let prevTextHtml = prevData ? `<span class="text-[11px] text-slate-500">(이전 ${prevData.title} 대비)</span>` : '';
+
+        html += `
+            <section class="relative">
+                <div class="flex items-center gap-2 mb-3">
+                    <h2 class="text-[13px] font-bold text-slate-800 bg-white px-3 py-1.5 rounded-md border border-slate-300 shadow-sm flex items-center gap-2">
+                        ${levelData.title} ${subtitleHtml}
+                    </h2>
+                    ${prevTextHtml}
+                    <div class="h-px bg-slate-200 flex-1 ml-2 hidden md:block"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    ${getStrategyCardHtml("유통골드 우선", "fa-coins", "border-amber-600", levelData.trade, prevData?.trade)}
+                    ${getStrategyCardHtml("귀속골드 우선", "fa-lock", "border-sky-600", levelData.bound, prevData?.bound)}
+                    ${getStrategyCardHtml("총 골드 최대로", "fa-scale-balanced", "border-emerald-600", levelData.total, prevData?.total)}
+                </div>
+            </section>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
 };
 
 // 마지막에 onValue를 등록하여 모든 함수 세팅이 완료된 후 최초 렌더링이 일어나도록 제어
