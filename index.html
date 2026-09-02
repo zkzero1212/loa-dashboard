@@ -5,42 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로스트아크 클라우드 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 폰트어썸 (레이드 골드 계산기 아이콘용) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f8fafc; color: #1e293b; font-family: 'Pretendard', sans-serif; overflow-y: scroll; overflow-x: hidden; }
-        .glass-panel { background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(226, 232, 240, 1); border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .tab-btn { transition: all 0.3s; color: #475569; background-color: #ffffff; }
-        .tab-btn:hover { background-color: #f1f5f9; }
-        .tab-btn.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border-color: transparent; }
-        .checkbox-custom:checked + div { background-color: #3b82f6; border-color: #3b82f6; color: white; }
-        .dungeon-badge { transition: all 0.2s ease; cursor: pointer; user-select: none; border-width: 1px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin: 2px; }
-        .dungeon-badge:hover { transform: translateY(-1px); box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1); }
-        .dungeon-badge:active { transform: translateY(0); }
-        .dungeon-badge.completed { text-decoration: line-through; opacity: 0.5; filter: grayscale(100%); background: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #94a3b8 !important; box-shadow: none; }
-        .supporter-glow { border-left-color: #fbbf24 !important; border-left-width: 4px !important; background: linear-gradient(90deg, rgba(253,230,138,0.2) 0%, rgba(255,255,255,1) 100%) !important; }
-        .slot-droppable { border: 2px dashed #cbd5e1; transition: all 0.2s; }
-        .slot-droppable.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
-        .party-completed { opacity: 0.25; filter: grayscale(100%) brightness(0.9); transition: all 0.3s; }
-        
-        /* 하이라이트 & 추적 시각 효과 */
-        .roster-dimmed { opacity: 0.2 !important; filter: grayscale(100%) !important; transition: all 0.3s; pointer-events: none; }
-        .roster-highlight { outline: 2px solid #3b82f6; outline-offset: 1px; transform: scale(1.03); z-index: 10; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.2s; }
-        .party-box-highlight { outline: 2px solid #3b82f6; outline-offset: 1px; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.15); }
-        
-        .char-track-party { outline: 2px dashed #a855f7; outline-offset: 1px; background: rgba(250, 245, 255, 0.98) !important; transition: all 0.3s; }
-        .char-track-slot { outline: 2px solid #a855f7 !important; outline-offset: 1px; transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(168, 85, 247, 0.3) !important; z-index: 10; position: relative; }
-        
-        ::-webkit-scrollbar { width: 8px; height: 10px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .cpm-table th, .cpm-table td { border: 1px solid #e2e8f0; padding: 8px 12px; }
-        @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-        .toast-enter { animation: slideInUp 0.3s forwards; }
-        .toast-exit { animation: fadeOut 0.5s forwards; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="p-2 lg:p-4 min-h-screen relative w-full">
 
@@ -70,7 +36,7 @@
         <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm">📊 대시보드</button>
         <button onclick="switchTab('filter')" id="tab-filter" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm">🔍 던전 파티 검색</button>
         <button onclick="switchTab('config')" id="tab-config" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm flex items-center gap-1">⚙️ 캐릭터 관리</button>
-        <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm flex items-center gap-1">🛠️ 편 기능</button>
+        <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn px-4 py-2 rounded-lg border border-slate-300 font-bold text-[13px] shadow-sm flex items-center gap-1">🛠️ 편의 기능</button>
     </div>
 
     <div id="view-dashboard" class="space-y-3">
