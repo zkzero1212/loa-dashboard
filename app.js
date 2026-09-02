@@ -31,7 +31,6 @@ let editingDbId = null;
 let editingCpmId = null;
 window.dashboardMode = 'party';
 window.summaryStates = {}; 
-window.partyBoardFilters = new Set(['4막', '종막', '성당', '세르카', '벨가']); 
 
 const dungeonCategories = [
     { id: '4막', label: '4막', diffs: ['4막싱글', '4막하드'] },
@@ -313,7 +312,7 @@ window.renderAll = function() {
     window.renderConfigTable(); 
     window.renderCpmRecords(); 
     if(typeof window.renderOrehaUI === 'function') window.renderOrehaUI();
-    if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator(); 
+    if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator(); // ★ 추가된 골드 계산기 렌더링 호출
 };
 
 window.switchTab = function(tabName) {
@@ -1220,7 +1219,7 @@ window.runCpmCalculation = function() {
         document.getElementById('res-target-percent-text').innerText = realAchievementRate.toFixed(1) + '%'; document.getElementById('res-target-percent-text').className = 'text-[13px] font-bold ' + textColorClass;
         
         const msgEl = document.getElementById('res-target-msg'); const badgeSuccess = document.getElementById('target-success-badge');
-        if(casts >= requiredCasts) { msgEl.innerHTML = '<span class="text-slate-700">설정한 목표 CPM 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>'; badgeSuccess.classList.remove('hidden'); }
+        if(casts >= requiredCasts) { msgEl.innerHTML = '<span class="text-slate-700">설정한 목표 CPM을 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>'; badgeSuccess.classList.remove('hidden'); }
         else { msgEl.innerText = '목표 달성까지 ' + (requiredCasts - casts) + '회 부족합니다.'; badgeSuccess.classList.add('hidden'); }
         document.getElementById('target-progress-section').classList.remove('hidden'); document.getElementById('res-target-val').innerText = target; document.getElementById('res-target-min-casts').innerText = requiredCasts + '회';
         
