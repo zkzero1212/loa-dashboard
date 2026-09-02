@@ -109,13 +109,10 @@ window.isCharClearedDungeon = function(char, fullDiffStr) {
             break;
         }
     }
-
     if (char.completed && char.completed.some(c => c.startsWith(catId))) return true;
-    
     if (Array.isArray(window.partyData)) {
         return window.partyData.some(p => p.cat === catId && p.isCleared && p.slots && p.slots.includes(char.dbId));
     }
-    
     return false;
 };
 
@@ -134,34 +131,26 @@ window.allowDropPartyBox = function(e) {
 window.dropPartyBox = function(e, targetPartyId, targetCatId) {
     e.preventDefault();
     e.stopPropagation();
-    
     let dataStr = e.dataTransfer.getData('application/json');
     if (!dataStr) return;
-
     try {
         let data = JSON.parse(dataStr);
         if (data.type === 'partyBox' && data.catId === targetCatId) {
             const sourcePartyId = data.partyId;
             if (sourcePartyId === targetPartyId) return;
-
             const catParties = window.partyData.filter(p => p.cat === targetCatId);
             const sourceIndex = catParties.findIndex(p => p.id === sourcePartyId);
             const targetIndex = catParties.findIndex(p => p.id === targetPartyId);
-
             if (sourceIndex > -1 && targetIndex > -1) {
                 const movedParty = catParties.splice(sourceIndex, 1)[0];
                 catParties.splice(targetIndex, 0, movedParty);
-                
                 const otherParties = window.partyData.filter(p => p.cat !== targetCatId);
                 window.partyData = [...otherParties, ...catParties];
-                
                 if(typeof window.saveToCloud === 'function') window.saveToCloud();
                 window.renderDashboard(); 
             }
         }
-    } catch(err) {
-        console.error(err);
-    }
+    } catch(err) { console.error(err); }
 };
 
 window.toggleHighlight = function(e, partyId) {
@@ -170,7 +159,6 @@ window.toggleHighlight = function(e, partyId) {
         if (tag === 'button' || tag === 'input' || (tag === 'span' && e.target.onclick)) return;
         if (e.target.closest('button') || e.target.closest('input')) return;
     }
-
     window.activeHighlightCharId = null; 
     if (window.activeHighlightPartyId === partyId) { window.activeHighlightPartyId = null; } 
     else { window.activeHighlightPartyId = partyId; }
@@ -197,7 +185,6 @@ window.updateHighlightDOM = function() {
     document.querySelectorAll('.roster-char-element').forEach(el => {
         el.classList.remove('roster-dimmed', 'roster-highlight', 'char-track-slot');
         const charId = el.getAttribute('data-char-id');
-
         if (partyId) {
             const char = window.charactersData.find(c => c.dbId === charId);
             const party = window.partyData.find(p => p.id === partyId);
@@ -312,7 +299,7 @@ window.renderAll = function() {
     window.renderConfigTable(); 
     window.renderCpmRecords(); 
     if(typeof window.renderOrehaUI === 'function') window.renderOrehaUI();
-    if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator(); // ★ 추가된 골드 계산기 렌더링 호출
+    if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator(); 
 };
 
 window.switchTab = function(tabName) {
@@ -1185,14 +1172,33 @@ window.requestReset = function(btnElement) {
 };
 
 window.switchToolTab = function(tabName) {
-    const tabCpm = document.getElementById('tool-tab-cpm'); const tabOreha = document.getElementById('tool-tab-oreha');
-    const viewCpm = document.getElementById('tool-view-cpm'); const viewOreha = document.getElementById('tool-view-oreha');
+    const tabCpm = document.getElementById('tool-tab-cpm'); 
+    const tabOreha = document.getElementById('tool-tab-oreha');
+    const tabGold = document.getElementById('tool-tab-gold');
+    
+    const viewCpm = document.getElementById('tool-view-cpm'); 
+    const viewOreha = document.getElementById('tool-view-oreha');
+    const viewGold = document.getElementById('tool-view-gold');
+    
+    if(tabCpm) tabCpm.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-blue-600 transition shrink-0";
+    if(tabOreha) tabOreha.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition shrink-0";
+    if(tabGold) tabGold.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-emerald-600 transition shrink-0";
+    
+    if(viewCpm) viewCpm.classList.add('hidden');
+    if(viewOreha) viewOreha.classList.add('hidden');
+    if(viewGold) viewGold.classList.add('hidden');
+
     if (tabName === 'cpm') {
-        tabCpm.className = "text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition"; tabOreha.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition";
-        viewCpm.classList.remove('hidden'); viewOreha.classList.add('hidden');
+        if(tabCpm) tabCpm.className = "text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition shrink-0";
+        if(viewCpm) viewCpm.classList.remove('hidden');
     } else if (tabName === 'oreha') {
-        tabCpm.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-blue-600 transition"; tabOreha.className = "text-orange-500 font-bold px-1 py-1 border-b-2 border-orange-500 text-sm transition";
-        viewCpm.classList.add('hidden'); viewOreha.classList.remove('hidden'); window.renderOrehaUI(); 
+        if(tabOreha) tabOreha.className = "text-orange-500 font-bold px-1 py-1 border-b-2 border-orange-500 text-sm transition shrink-0";
+        if(viewOreha) viewOreha.classList.remove('hidden'); 
+        if(typeof window.renderOrehaUI === 'function') window.renderOrehaUI(); 
+    } else if (tabName === 'gold') {
+        if(tabGold) tabGold.className = "text-emerald-600 font-bold px-1 py-1 border-b-2 border-emerald-500 text-sm transition shrink-0";
+        if(viewGold) viewGold.classList.remove('hidden');
+        if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator();
     }
 };
 
