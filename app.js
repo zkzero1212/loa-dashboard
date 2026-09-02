@@ -57,8 +57,18 @@ window.saveToCloud = function() {
     partyData: window.partyData || [],
     cpmData: window.cpmData || { inputs: {}, records: [] },
     oState: window.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} },
-    appState: window.appState || { title: '💻 로스트아크 클라우드 대시보드' }
+    appState: window.appState || { title: '💻 로스트아크 클라우드 대시보드' },
+    lastWeeklyResetId: window.lastWeeklyResetId
   });
+};
+
+window.getRecentWednesdayId = function() {
+    const now = new Date();
+    const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const day = adjustedNow.getDay(); 
+    const diff = (day >= 3) ? (day - 3) : (day + 4);
+    adjustedNow.setDate(adjustedNow.getDate() - diff);
+    return `${adjustedNow.getFullYear()}-${adjustedNow.getMonth() + 1}-${adjustedNow.getDate()}`;
 };
 
 window.calculateContents = function(level) {
@@ -303,7 +313,7 @@ window.renderAll = function() {
     window.renderConfigTable(); 
     window.renderCpmRecords(); 
     if(typeof window.renderOrehaUI === 'function') window.renderOrehaUI();
-    if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator(); // ★ 추가됨
+    if(typeof window.renderGoldCalculator === 'function') window.renderGoldCalculator(); 
 };
 
 window.switchTab = function(tabName) {
@@ -1175,6 +1185,18 @@ window.requestReset = function(btnElement) {
     }
 };
 
+window.switchToolTab = function(tabName) {
+    const tabCpm = document.getElementById('tool-tab-cpm'); const tabOreha = document.getElementById('tool-tab-oreha');
+    const viewCpm = document.getElementById('tool-view-cpm'); const viewOreha = document.getElementById('tool-view-oreha');
+    if (tabName === 'cpm') {
+        tabCpm.className = "text-blue-600 font-bold px-1 py-1 border-b-2 border-blue-600 text-sm transition"; tabOreha.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-orange-500 transition";
+        viewCpm.classList.remove('hidden'); viewOreha.classList.add('hidden');
+    } else if (tabName === 'oreha') {
+        tabCpm.className = "text-slate-500 font-bold px-1 py-1 text-sm cursor-pointer hover:text-blue-600 transition"; tabOreha.className = "text-orange-500 font-bold px-1 py-1 border-b-2 border-orange-500 text-sm transition";
+        viewCpm.classList.add('hidden'); viewOreha.classList.remove('hidden'); window.renderOrehaUI(); 
+    }
+};
+
 window.runCpmCalculation = function() {
     const min = parseInt(document.getElementById('cpm-min').value) || 0; const sec = parseInt(document.getElementById('cpm-sec').value) || 0; const casts = parseInt(document.getElementById('cpm-casts').value) || 0;
     const target = parseFloat(document.getElementById('cpm-target').value) || 0; const scarecrow = parseFloat(document.getElementById('cpm-scarecrow').value) || 0; const exclude = parseInt(document.getElementById('cpm-exclude').value) || 0;
@@ -1198,7 +1220,7 @@ window.runCpmCalculation = function() {
         document.getElementById('res-target-percent-text').innerText = realAchievementRate.toFixed(1) + '%'; document.getElementById('res-target-percent-text').className = 'text-[13px] font-bold ' + textColorClass;
         
         const msgEl = document.getElementById('res-target-msg'); const badgeSuccess = document.getElementById('target-success-badge');
-        if(casts >= requiredCasts) { msgEl.innerHTML = '<span class="text-slate-700">설정한 목표 CPM을 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>'; badgeSuccess.classList.remove('hidden'); }
+        if(casts >= requiredCasts) { msgEl.innerHTML = '<span class="text-slate-700">설정한 목표 CPM 달성했습니다.</span><br><span class="text-[10px] text-slate-400">같은 조건의 전투 기록을 반복해서 비교하면 일시적인 고점인지 안정적으로 유지되는 수치인지 확인하기 좋습니다.</span>'; badgeSuccess.classList.remove('hidden'); }
         else { msgEl.innerText = '목표 달성까지 ' + (requiredCasts - casts) + '회 부족합니다.'; badgeSuccess.classList.add('hidden'); }
         document.getElementById('target-progress-section').classList.remove('hidden'); document.getElementById('res-target-val').innerText = target; document.getElementById('res-target-min-casts').innerText = requiredCasts + '회';
         
@@ -1563,12 +1585,28 @@ onValue(dbRef, (snapshot) => {
     window.cpmData = data.cpmData || { inputs: {}, records: [] };
     window.oState = data.oState || { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
     window.appState = data.appState || { title: '💻 로스트아크 클라우드 대시보드' };
+    window.lastWeeklyResetId = data.lastWeeklyResetId || null; 
   } else {
     window.charactersData = [];
     window.partyData = [];
     window.cpmData = { inputs: {}, records: [] };
     window.oState = { craftType: 'normal', inv: {w:0, g:0, b:0, p:0, t:0}, prices: {w:0, g:0, b:0, t:0, low:0, high:0} };
     window.appState = { title: '💻 로스트아크 클라우드 대시보드' };
+    window.lastWeeklyResetId = null;
+  }
+
+  const currentResetId = window.getRecentWednesdayId();
+  
+  if (window.lastWeeklyResetId && window.lastWeeklyResetId !== currentResetId) {
+      window.charactersData.forEach(c => { c.completed = []; });
+      window.partyData.forEach(p => { p.isCleared = false; });
+      window.lastWeeklyResetId = currentResetId;
+      
+      window.saveToCloud();
+      setTimeout(() => window.showToast('수요일 06시 주간 숙제가 자동 초기화되었습니다.', 'success'), 1000);
+  } else if (!window.lastWeeklyResetId) {
+      window.lastWeeklyResetId = currentResetId;
+      window.saveToCloud();
   }
 
   const titleEl = document.getElementById('display-app-title');
